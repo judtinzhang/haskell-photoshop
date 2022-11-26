@@ -4,9 +4,9 @@ version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/project-cis5520#readme>
 homepage:       https://github.com/githubuser/project-cis5520#readme
 bug-reports:    https://github.com/githubuser/project-cis5520/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2022 Author name here
+author:         Jason Yan and Justin Zhang
+maintainer:     jasyan@seas.upenn.edu
+copyright:      2022 Jason Yan and Justin Zhang
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
@@ -31,6 +31,7 @@ common common-stanza
     , directory
     , random
     , mtl
+    , hip
   default-language:
     Haskell2010
   -- these extensions are enabled for GHC2021, turning them on now for 

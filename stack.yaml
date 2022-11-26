@@ -1,6 +1,9 @@
 resolver: lts-19.19
 allow-newer: true
 packages:
-- .
-
-
+  - .
+extra-deps:
+  - Chart-diagrams-1.9.4@sha256:c04a6f1005aac1d5cdbba9d835cac302e9de4033314c2253a4c4f3b69c5afb4b,1762
+  - diagrams-postscript-1.5.1@sha256:ef80dca9931d5e4086a80085fcffada2432399d8bf3b9704f8bdca8b0614c670,2395
+  - statestack-0.3.1@sha256:88d630aa2556ca699f6c96625e81973cf0e6ea6384e3c7f9c59f69fd8f4e7daf,1098
+  - hip-1.5.6.0@sha256:296c55622f62485422c0a593c7306af1a5abf8ba9f866dcdffc281b01eba65d7,6988

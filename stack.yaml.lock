@@ -3,7 +3,35 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: Chart-diagrams-1.9.4@sha256:c04a6f1005aac1d5cdbba9d835cac302e9de4033314c2253a4c4f3b69c5afb4b,1762
+    pantry-tree:
+      size: 934
+      sha256: b9f9857880bbc3b0411ad65ba43655045dd7d8ef3218406b0af096df9876492c
+  original:
+    hackage: Chart-diagrams-1.9.4@sha256:c04a6f1005aac1d5cdbba9d835cac302e9de4033314c2253a4c4f3b69c5afb4b,1762
+- completed:
+    hackage: diagrams-postscript-1.5.1@sha256:ef80dca9931d5e4086a80085fcffada2432399d8bf3b9704f8bdca8b0614c670,2395
+    pantry-tree:
+      size: 480
+      sha256: 6d80b88e3e092509431afde33026db7f3cc85e24e105613735dfd06d273e0c53
+  original:
+    hackage: diagrams-postscript-1.5.1@sha256:ef80dca9931d5e4086a80085fcffada2432399d8bf3b9704f8bdca8b0614c670,2395
+- completed:
+    hackage: statestack-0.3.1@sha256:88d630aa2556ca699f6c96625e81973cf0e6ea6384e3c7f9c59f69fd8f4e7daf,1098
+    pantry-tree:
+      size: 273
+      sha256: c97938704103fe9371b9f629cbfac9442687685524755926cec1bc44059de9d4
+  original:
+    hackage: statestack-0.3.1@sha256:88d630aa2556ca699f6c96625e81973cf0e6ea6384e3c7f9c59f69fd8f4e7daf,1098
+- completed:
+    hackage: hip-1.5.6.0@sha256:296c55622f62485422c0a593c7306af1a5abf8ba9f866dcdffc281b01eba65d7,6988
+    pantry-tree:
+      size: 7456
+      sha256: d79395e6ec9caf1132a7e001f6fe9b8ebada31e0e52087a4a1a971e3f295a7f4
+  original:
+    hackage: hip-1.5.6.0@sha256:296c55622f62485422c0a593c7306af1a5abf8ba9f866dcdffc281b01eba65d7,6988
 snapshots:
 - completed:
     size: 619170
