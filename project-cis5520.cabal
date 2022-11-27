@@ -22,7 +22,7 @@ common common-stanza
   ghc-options:         -Wno-type-defaults -fwarn-incomplete-patterns
   build-depends:
       base >=4.15
-    , HUnit 
+    , HUnit
     , QuickCheck
     , containers
     , filepath
@@ -34,7 +34,7 @@ common common-stanza
     , hip
   default-language:
     Haskell2010
-  -- these extensions are enabled for GHC2021, turning them on now for 
+  -- these extensions are enabled for GHC2021, turning them on now for
   -- future compatibility
   default-extensions:
     BangPatterns
@@ -87,7 +87,9 @@ library
   import:
       common-stanza
   exposed-modules:
-      Lib
+      IO
+      PPM
+      QuadTree
   hs-source-dirs:
       src
   default-language: Haskell2010
@@ -95,7 +97,7 @@ library
 executable project-cis5520-exe
   import:
       common-stanza
-  main-is: 
+  main-is:
       Main.hs
   hs-source-dirs:
       app
@@ -107,9 +109,9 @@ executable project-cis5520-exe
 test-suite project-cis5520-test
   import:
       common-stanza
-  type: 
+  type:
       exitcode-stdio-1.0
-  main-is: 
+  main-is:
       Spec.hs
   hs-source-dirs:
       test

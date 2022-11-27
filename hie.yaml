@@ -3,7 +3,7 @@ cradle:
     - path: ./test
       component: "project-cis5520:test:project-cis5520-test"
     - path: ./src
-      component: "project-cis5520:lib"
+      component: "project-cis5520:io"
     - path: ./app
       component: "project-cis5520:exe:project-cis5520-exe"
 
