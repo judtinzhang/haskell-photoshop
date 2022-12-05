@@ -21,6 +21,9 @@ instance (Arbitrary e) => Arbitrary (QuadTree e) where
 propDecompressCompressValid :: QuadTree Color -> Bool
 propDecompressCompressValid qt = qt == compress (decompress qt)
 
+propRotate90 :: QuadTree Color -> Bool
+propRotate90 qt = qtRotate qt 90 == compress (ppmRotate (decompress qt) 90)
+
 -- Compress and then decompress should yield same PPM
 propCompressDecompressValid :: PPM -> Bool
 propCompressDecompressValid ppm = ppm == decompress (compress ppm)
@@ -28,8 +31,6 @@ propCompressDecompressValid ppm = ppm == decompress (compress ppm)
 -- Property tests assert that operators should output the same result
 -- regardless of image representation (PPM and QuadTree)
 
-propRotate90 :: QuadTree Color -> Bool
-propRotate90 qt = qtRotate qt 90 == compress (ppmRotate (decompress qt) 90)
 
 propRotate180 :: QuadTree Color -> Bool
 propRotate180 qt = qtRotate qt 180 == compress (ppmRotate (decompress qt) 180)

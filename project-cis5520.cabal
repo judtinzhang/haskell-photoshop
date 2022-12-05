@@ -19,7 +19,7 @@ source-repository head
   location: https://github.com/githubuser/project-cis5520
 
 common common-stanza
-  ghc-options:         -Wno-type-defaults -fwarn-incomplete-patterns
+  ghc-options:         -Wno-type-defaults -fwarn-incomplete-patterns -Wincomplete-patterns 
   build-depends:
       base >=4.15
     , HUnit
@@ -32,6 +32,8 @@ common common-stanza
     , random
     , mtl
     , hip
+    , JuicyPixels
+    -- , split
   default-language:
     Haskell2010
   -- these extensions are enabled for GHC2021, turning them on now for
@@ -41,6 +43,7 @@ common common-stanza
     BinaryLiterals
     ConstrainedClassMethods
     ConstraintKinds
+    DataKinds
     DeriveDataTypeable
     DeriveFoldable
     DeriveFunctor
