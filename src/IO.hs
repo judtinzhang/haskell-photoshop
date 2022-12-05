@@ -20,3 +20,4 @@ someFunc :: String
 someFunc = "Hello CIS 5520"
 
 -- State for compression ratio
+-- criterion package for benchmarking
