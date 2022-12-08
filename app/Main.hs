@@ -14,7 +14,7 @@ main = do
     Nothing -> print "error"
     Just ppm ->
       let image = writeOutput ppm
-       in toPng (ImageRGBA8 image)
+       in toJpg (ImageRGBA8 image)
 
 -- print ppm
 
@@ -30,13 +30,3 @@ imageCreator = writePng "hi.png" $ generateImage pixelRenderer 250 250
     pixelRenderer x y =
       let r = PixelRGB8 (fromIntegral x) (fromIntegral y) 128
        in r
-
--- PixelRGB8
--- (PixelYA8 x)
--- 22
--- 128
-
--- print p
--- case p of
--- Nothing -> print "error"
--- Just x -> print x
