@@ -6,6 +6,7 @@ import Codec.Picture
 import qualified Codec.Picture.Types as M
 import qualified Data.Vector as V
 import qualified Data.Vector.Storable as VS
+import Debug.Trace
 
 -- ================= DEBUGGING =========================
 
@@ -36,6 +37,12 @@ doPrint :: IO ()
 doPrint = debugger "crab.png" "crab.jpg"
 
 -- =====================================================
+
+toDouble :: Pixel8 -> Double
+toDouble = fromIntegral . toInteger
+
+toPixel8 :: Double -> Pixel8
+toPixel8 = fromIntegral . round
 
 rgbToRGBA :: [Pixel8] -> [Pixel8]
 rgbToRGBA (r : g : b : xs) = r : g : b : 255 : rgbToRGBA xs
@@ -84,13 +91,13 @@ readInput i = do
   case dImage of
     Left err -> return Nothing
     Right (ImageRGB8 image) ->
-      let ppm = vecToPPM (rgbToRGBA $ VS.toList $ imageData image) (imageWidth image) in
+      let ppm = vecToPPM (map toDouble (rgbToRGBA $ VS.toList $ imageData image)) (imageWidth image) in
       return $ Just ppm
     Right (ImageRGBA8 image) ->
-      let ppm = vecToPPM (VS.toList $ imageData image) (imageWidth image) in
+      let ppm = vecToPPM (map toDouble (VS.toList $ imageData image)) (imageWidth image) in
       return $ Just ppm
     Right (ImageYCbCr8 image) ->
-      let ppm = vecToPPM (ycbcrToRGBA $ VS.toList $ imageData image) (imageWidth image) in
+      let ppm = vecToPPM (map toDouble (ycbcrToRGBA $ VS.toList $ imageData image)) (imageWidth image) in
       return $ Just ppm
     Right _ -> return Nothing
 
@@ -100,7 +107,7 @@ writeOutput i =
   where
     gen x y =
       let (r, g, b, a) = i !! y !! x in
-      PixelRGBA8 r g b a
+      PixelRGBA8 (toPixel8 r) (toPixel8 g) (toPixel8 b) (toPixel8 a)
 -- writeOutput (QtRep i) = undefined
 
 -- TODO: still use?

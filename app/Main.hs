@@ -6,13 +6,13 @@ import PPM
 
 main :: IO ()
 main = do
-  p <- readInput "simplecolor.png"
+  p <- readInput "crab.png"
   case p of
     Nothing -> print "error"
     Just ppm -> 
       -- let transformed = ppmChangeColor yellow (0, 0, 200, 255) ppm in
       -- let transformed = ppmCrop 100 500 200 900 ppm 
-      let transformed = ppmSaturate 0 ppm in do 
+      let transformed = ppmBlur ppm 3 in do 
       -- let (r', g', b', a') = transformed
       -- print ppm
       -- print transformed
