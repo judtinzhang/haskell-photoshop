@@ -10,7 +10,7 @@ module QuadTree (
     qtGrayscale,
     qtBlur,
     qtCrop,
-    testQT
+    testQT,
 ) where
 
 import Data.Foldable qualified as Foldable
@@ -18,13 +18,6 @@ import PPM qualified as P (PPM, RGBA)
 
 -- import PPM qualified as P (RGBA)
 
-compress :: P.PPM -> QuadTree e
-compress = undefined
-
-decompress :: QuadTree e -> P.PPM
-decompress = undefined
-
-type Coord = (Int, Int)
 
 data PixelList e = PL {
   isHorizontal :: Bool,
@@ -89,29 +82,40 @@ buildQuadTree ppm@(w : ws) =
 buildQuadTree [] = error "QT cannot accept empty image"
 
 
+combinePPM :: [[e]] -> [[e]] -> [[e]] -> [[e]] -> [[e]]
+combinePPM tl tr bl br = zipWith (++) (tl ++ bl) (tr ++ br)
 
-
-
-
-
-
-
-
-
-
+buildPPM :: Eq e => QuadTree e -> [[e]]
+buildPPM (Leaf (x, i, j)) = replicate i $ replicate j x
+buildPPM (LeafList pl) =
+  if isHorizontal pl
+    then [pixelData pl]
+    else map (: []) $ pixelData pl
+buildPPM (QT tl tr bl br i j) =
+  let ppm1 = buildPPM tl in
+  let ppm2 = buildPPM tr in
+  let ppm3 = buildPPM bl in
+  let ppm4 = buildPPM br in
+  combinePPM ppm1 ppm2 ppm3 ppm4
 
 
 mat :: [[Int]]
-mat = [[1, 1, 1], [1, 3, 3], [1, 3, 3]]
+mat = [[1, 1, 1, 4], [1, 3, 3, 4], [1, 3, 3, 5]]
 
 qt :: QuadTree Int
 qt = buildQuadTree mat
 
 testQT :: IO ()
 testQT = do
-  print qt
+  -- print qt
+  let ppm = buildPPM qt
+  print ppm
 
+compress :: P.PPM -> QuadTree P.RGBA
+compress = buildQuadTree
 
+decompress :: QuadTree P.RGBA -> P.PPM
+decompress = buildPPM
 
 
 -- -- | List the elements in the tree, in ascending order
