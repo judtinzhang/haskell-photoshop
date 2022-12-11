@@ -6,12 +6,17 @@ import PPM
 
 main :: IO ()
 main = do
-  p <- readInput "car.png"
+  p <- readInput "simplecolor.png"
   case p of
     Nothing -> print "error"
-    Just ppm ->
-      --let transformed = ppmChangeColor yellow (0, 0, 200, 255) ppm in
-      let transformed = ppmCrop 100 500 200 900 ppm in
+    Just ppm -> 
+      -- let transformed = ppmChangeColor yellow (0, 0, 200, 255) ppm in
+      -- let transformed = ppmCrop 100 500 200 900 ppm 
+      let transformed = ppmSaturate 0 ppm in do 
+      -- let (r', g', b', a') = transformed
+      -- print ppm
+      -- print transformed
+      -- putStrLn 
       let image = writeOutput transformed in
        toPng (ImageRGBA8 image)
 
