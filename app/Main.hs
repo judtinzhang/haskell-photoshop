@@ -1,11 +1,8 @@
 module Main where
 
--- import Codec.Picture
-
 import Codec.Picture
 import IO (readInput, toJpg, toPng, writeOutput)
-
--- import IO
+import PPM
 
 main :: IO ()
 main = do
@@ -13,8 +10,10 @@ main = do
   case p of
     Nothing -> print "error"
     Just ppm ->
-      let image = writeOutput ppm
-       in toJpg (ImageRGBA8 image)
+      --let transformed = ppmChangeColor yellow (0, 0, 200, 255) ppm in
+      let transformed = ppmCrop 100 500 200 900 ppm in
+      let image = writeOutput transformed in
+       toPng (ImageRGBA8 image)
 
 -- print ppm
 
@@ -28,5 +27,5 @@ imageCreator = writePng "hi.png" $ generateImage pixelRenderer 250 250
   where
     pixelRenderer :: Int -> Int -> PixelRGB8
     pixelRenderer x y =
-      let r = PixelRGB8 (fromIntegral x) (fromIntegral y) 128
+      let r = PixelRGB8 (fromIntegral x) (fromIntegral y) 128 
        in r

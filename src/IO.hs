@@ -1,6 +1,6 @@
 module IO (readInput, writeOutput, toJpg, toPng, doPrint) where
 
-import PPM qualified as P (PPM)
+import PPM qualified as P (PPM, RGBA)
 import QuadTree qualified as QT (QuadTree)
 import Codec.Picture
 import qualified Codec.Picture.Types as M
@@ -17,7 +17,7 @@ debugger s t = do
     Right (ImageRGB8 image) ->
       -- print $ length $ rgbToRGBA $ VS.toList $ imageData image
       -- print $ length $ VS.toList $ imageData image
-      print "ImageRGB8"
+      print "ImageRGBA8"
     Right (ImageRGBA8 image) ->
       -- print "ImageRGBA8"
       -- print $ imageWidth image
@@ -77,8 +77,8 @@ vecToPPM v@(r : g : b : a : xs) w = ret : vecToPPM remaining w
   where (ret, remaining) = createPPMRow v 0 w
 vecToPPM _ _ = []
 
--- readInput :: String -> Maybe P.PPM
-readInput :: String -> IO (Maybe [[(Pixel8, Pixel8, Pixel8, Pixel8)]])
+-- readInput :: String -> IO (Maybe [[(Pixel8, Pixel8, Pixel8, Pixel8)]])
+readInput :: String -> IO (Maybe P.PPM)
 readInput i = do
   dImage <- readImage i
   case dImage of
@@ -94,13 +94,14 @@ readInput i = do
       return $ Just ppm
     Right _ -> return Nothing
 
-writeOutput :: [[(Pixel8, Pixel8, Pixel8, Pixel8)]] -> Image PixelRGBA8
+writeOutput :: P.PPM -> Image PixelRGBA8
 writeOutput i =
   generateImage gen (length (head i)) (length i)
   where
     gen x y =
       let (r, g, b, a) = i !! y !! x in
       PixelRGBA8 r g b a
+-- writeOutput (QtRep i) = undefined
 
 -- TODO: still use?
 
@@ -108,5 +109,7 @@ data IOFile
   = JPG String
   | PNG String
 
-data ImageRep = PPM | QuadTree
+-- data ImageRep 
+--   = PpmRep P.PPM
+--   | QtRep (QT.QuadTree P.RGBA)
 

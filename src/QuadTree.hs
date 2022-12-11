@@ -13,9 +13,9 @@ module QuadTree (
 ) where
 
 import Data.Foldable qualified as Foldable
-import PPM qualified as P (PPM, Color)
+import PPM qualified as P (PPM, RGBA)
 
--- import PPM qualified as P (Color)
+-- import PPM qualified as P (RGBA)
 
 compress :: P.PPM -> QuadTree e
 compress = undefined
@@ -46,7 +46,7 @@ qtReflectHorizontal = undefined
 qtReflectVertical :: QuadTree e -> QuadTree e
 qtReflectVertical = undefined
 
-qtChangeColor :: QuadTree e -> P.Color -> QuadTree e
+qtChangeColor :: QuadTree e -> P.RGBA -> QuadTree e
 qtChangeColor = undefined
 
 qtSaturate :: QuadTree e -> Int -> QuadTree e

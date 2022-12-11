@@ -4,10 +4,10 @@ import QuadTree
 import Test.HUnit
 import Test.QuickCheck
 
-instance Arbitrary Color where
-  arbitrary :: Gen Color
+instance Arbitrary RGBA where
+  arbitrary :: Gen RGBA
   arbitrary = undefined
-  shrink :: Color -> [Color]
+  shrink :: RGBA -> [RGBA]
   shrink _ = []
 
 instance (Arbitrary e) => Arbitrary (QuadTree e) where
@@ -18,10 +18,10 @@ instance (Arbitrary e) => Arbitrary (QuadTree e) where
   shrink _ = []
 
 -- Decompress and then compress should yield same QuadTree
-propDecompressCompressValid :: QuadTree Color -> Bool
+propDecompressCompressValid :: QuadTree RGBA -> Bool
 propDecompressCompressValid qt = qt == compress (decompress qt)
 
-propRotate90 :: QuadTree Color -> Bool
+propRotate90 :: QuadTree RGBA -> Bool
 propRotate90 qt = qtRotate qt 90 == compress (ppmRotate (decompress qt) 90)
 
 -- Compress and then decompress should yield same PPM
@@ -32,51 +32,51 @@ propCompressDecompressValid ppm = ppm == decompress (compress ppm)
 -- regardless of image representation (PPM and QuadTree)
 
 
-propRotate180 :: QuadTree Color -> Bool
+propRotate180 :: QuadTree RGBA -> Bool
 propRotate180 qt = qtRotate qt 180 == compress (ppmRotate (decompress qt) 180)
 
-propRotate270 :: QuadTree Color -> Bool
+propRotate270 :: QuadTree RGBA -> Bool
 propRotate270 qt = qtRotate qt 270 == compress (ppmRotate (decompress qt) 270)
 
-propReflectHorizontal :: QuadTree Color -> Bool
+propReflectHorizontal :: QuadTree RGBA -> Bool
 propReflectHorizontal qt = qtReflectHorizontal qt == compress (ppmReflectHorizontal (decompress qt))
 
-propReflectVertical :: QuadTree Color -> Bool
+propReflectVertical :: QuadTree RGBA -> Bool
 propReflectVertical qt = qtReflectVertical qt == compress (ppmReflectVertical (decompress qt))
 
-propChangeColor :: QuadTree Color -> Color -> Bool
-propChangeColor qt color = qtChangeColor qt color == compress (ppmChangeColor (decompress qt) color)
+propChangeRGBA :: QuadTree RGBA -> RGBA -> Bool
+propChangeRGBA qt color = qtChangeRGBA qt color == compress (ppmChangeRGBA (decompress qt) color)
 
-propSaturate :: QuadTree Color -> Int -> Bool
+propSaturate :: QuadTree RGBA -> Int -> Bool
 propSaturate qt x = qtSaturate qt x == compress (ppmSaturate (decompress qt) x)
 
-propGrayScale :: QuadTree Color -> Int -> Bool
+propGrayScale :: QuadTree RGBA -> Int -> Bool
 propGrayScale qt x = qtGrayscale qt x == compress (ppmGrayscale (decompress qt) x)
 
-propBlur :: QuadTree Color -> Int -> Bool
+propBlur :: QuadTree RGBA -> Int -> Bool
 propBlur qt x = qtBlur qt x == compress (ppmBlur (decompress qt) x)
 
-propCrop :: QuadTree Color -> Int -> Int -> Int -> Int -> Bool
+propCrop :: QuadTree RGBA -> Int -> Int -> Int -> Int -> Bool
 propCrop qt x y z w = qtCrop qt x y z w == compress (ppmCrop (decompress qt) x y z w)
 
 -- Begint test cases
 
-white :: Color
+white :: RGBA
 white = C (256, 256, 256)
 
 whitePPM :: PPM
 whitePPM = [[white, white], [white, white]]
 
-whiteQT :: QuadTree Color
+whiteQT :: QuadTree RGBA
 whiteQT = Leaf white
 
-black :: Color
+black :: RGBA
 black = C (0, 0, 0)
 
 whiteBlackPPM :: PPM
 whiteBlackPPM = [[black, white], [white, white]]
 
-whiteBlackQT :: QuadTree Color
+whiteBlackQT :: QuadTree RGBA
 whiteBlackQT = QT (Leaf black) (Leaf white) (Leaf white) (Leaf white) 1
 
 testCompress :: Test
@@ -136,8 +136,8 @@ qc = do
   quickCheck propReflectHorizontal
   putStrLn "Reflect Vertical"
   quickCheck propReflectVertical
-  putStrLn "Change Color"
-  quickCheck propChangeColor
+  putStrLn "Change RGBA"
+  quickCheck propChangeRGBA
   putStrLn "Saturate"
   quickCheck propSaturate
   putStrLn "Grayscale"
