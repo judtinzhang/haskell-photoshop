@@ -3,7 +3,6 @@ import Pixel
 import QuadTree
 import Test.HUnit
 import Test.QuickCheck
-import Test.QuickCheck (Arbitrary (arbitrary))
 
 newtype RGBAWrapper = RGBAW {rgba :: RGBA}
 
@@ -102,6 +101,14 @@ propDecompressCompressValid qt = qt == compress (decompress qt)
 propRotateLeft :: QuadTree RGBA -> Bool
 propRotateLeft qt = decompress (qtRotateLeft qt) == ppmRotateLeft (decompress qt)
 
+-- The QuadTree format should maintain the same size before and after compression
+propLossless :: PPMWrapper -> Bool
+propLossless ppmw =
+  let oldPPM = ppm ppmw
+   in let newPPM = decompress (compress (ppm ppmw))
+       in length oldPPM * length (head oldPPM)
+            == length newPPM * length (head newPPM)
+
 -- Compress and then decompress should yield same PPM
 propCompressDecompressValid :: PPMWrapper -> Bool
 propCompressDecompressValid ppmw = ppm ppmw == decompress (compress $ ppm ppmw)
@@ -130,21 +137,29 @@ propGrayScale qt = decompress (qtGrayscale qt) == ppmGrayscale (decompress qt)
 propBlur :: QuadTree RGBA -> Int -> Bool
 propBlur qt x = decompress (qtBlur qt x) == ppmBlur (decompress qt) x
 
-cropParams :: PPM -> Int -> Int -> Int -> Int -> (Int, Int, Int, Int)
-cropParams ppm a b c d =
-  let r1 = max 0 $ min a b
-   in let r2 = min (length ppm - 1) $ max a b
-       in let c1 = max 0 $ min c d
-           in let c2 = min (length (head ppm) - 1) $ max c d
+validRanges :: PPM -> Int -> Int -> Int -> Int -> (Int, Int, Int, Int)
+validRanges ppm a b c d =
+  let r1 = min (length ppm - 1) $ max 0 a
+   in let r2 = min (length ppm - 1) $ max 0 b
+       in let c1 = min (length (head ppm) - 1) $ max 0 c
+           in let c2 = min (length (head ppm) - 1) $ max 0 d
                in (min r1 r2, max r1 r2, min c1 c2, max c1 c2)
 
 -- Test propCrop on PPM because QuadTree does not maintain absolute coordinates of pixels
 propCrop :: PPMWrapper -> Int -> Int -> Int -> Int -> Bool
 propCrop ppmw a b c d =
   let p = ppm ppmw
-   in let (r1, r2, c1, c2) = cropParams p a b c d
+   in let (r1, r2, c1, c2) = validRanges p a b c d
        in decompress (qtCrop r1 r2 c1 c2 (compress p))
             == ppmCrop r1 r2 c1 c2 p
+
+-- Test that getting an x y coordinate in both QuadTree and PPM yield same value
+propGetColor :: PPMWrapper -> Int -> Int -> Int -> Int -> Bool
+propGetColor ppmw a b c d =
+  let p = ppm ppmw
+   in let (r1, r2, c1, c2) = validRanges p a b c d
+       in Just (p !! r1 !! c1) == qtGetColor r1 c1 (compress p)
+            && Just (p !! r2 !! c2) == qtGetColor r2 c2 (compress p)
 
 -- Begin test cases
 
@@ -224,8 +239,16 @@ testGrayScale =
         qtGrayscale whiteQT ~?= compress (ppmGrayscale (decompress whiteQT))
       ]
 
+-- testBad :: Test
+-- testBad =
+--   "testBad"
+--     ~: TestList
+--       [qtGetColor 1 0 (compress whiteBlackPPM) ~?= Just black]
+
 test_all :: IO Counts
 test_all = runTestTT $ TestList [testCompress, testDecompress, testRotate, testReflect, testGrayScale]
+
+-- test_all = runTestTT $ TestList [testBad]
 
 qc :: IO ()
 qc = do
@@ -233,6 +256,8 @@ qc = do
   quickCheck propDecompressCompressValid
   putStrLn "Compress Decompress"
   quickCheck propCompressDecompressValid
+  putStrLn "Lossless"
+  quickCheck propLossless
   putStrLn "Rotate Left"
   quickCheck propRotateLeft
   putStrLn "Rotate Right"
@@ -251,8 +276,10 @@ qc = do
   -- quickCheck propBlur
   putStrLn "Crop"
   quickCheck propCrop
+  putStrLn "Get Color"
+  quickCheck propGetColor
 
 main :: IO ()
 main = do
-  test_all
+  -- test_all
   qc

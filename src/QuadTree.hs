@@ -11,6 +11,7 @@ module QuadTree (
     qtSaturate,
     qtGrayscale,
     qtBlur,
+    qtGetColor,
     qtCrop,
     testQT,
 ) where
@@ -150,6 +151,24 @@ recompress qt@(QT tl tr bl br h w) =
       Nothing -> error "impossible color"
     else qt
 recompress x = x
+
+qtGetColor :: Int -> Int -> QuadTree e -> Maybe e
+qtGetColor _ _ (Leaf (c, _, _)) = Just c
+qtGetColor y x (LeafList pl) =
+  if isHorizontal pl && y > 1 || not (isHorizontal pl) && x > 1
+    then Nothing
+    else Just $ pixelData pl !! max y x
+qtGetColor y x (QT tl tr bl br h w) =
+  let x_mid = w `div` 2  in
+  let y_mid = h `div` 2 in
+  if y < y_mid then
+    if x < x_mid
+      then qtGetColor y x tl
+      else qtGetColor y (x - x_mid) tr
+  else
+    if x < x_mid
+      then qtGetColor (y - y_mid) x bl
+      else qtGetColor (y - y_mid) (x - x_mid) br
 
 qtRotateLeft :: QuadTree e -> QuadTree e
 qtRotateLeft (Leaf (x, i, j)) = Leaf (x, j, i)
