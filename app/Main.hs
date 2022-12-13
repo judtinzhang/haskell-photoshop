@@ -25,3 +25,4 @@ main = do
 -- benchmarking
 -- stack exec project-cis5520-exe
 -- Data.Vector
+-- clean up code
