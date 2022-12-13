@@ -26,3 +26,4 @@ main = do
 -- stack exec project-cis5520-exe
 -- new type to wrap PPM / RGBA
 -- Data.Vector
+-- TODO: test recompress?

@@ -16,7 +16,7 @@ module QuadTree (
 ) where
 
 import Data.Foldable qualified as Foldable
-import PPM qualified as P (PPM)
+import PPM qualified as P (PPM, ppmCrop)
 import Pixel
 import Debug.Trace
 
@@ -232,5 +232,5 @@ qtBlur :: QuadTree e -> Int -> QuadTree e
 qtBlur = undefined
 
 -- ints: upper left corner (x, y) and size (w, l)
-qtCrop :: Int -> Int -> Int -> Int -> QuadTree e -> QuadTree e
-qtCrop = undefined
+qtCrop :: Int -> Int -> Int -> Int -> QuadTree RGBA -> QuadTree RGBA
+qtCrop r1 r2 c1 c2 qt = compress (P.ppmCrop r1 r2 c1 c2 (decompress qt))

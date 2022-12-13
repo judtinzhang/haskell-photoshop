@@ -119,19 +119,32 @@ propReflectVertical :: QuadTree RGBA -> Bool
 propReflectVertical qt = decompress (qtReflectVertical qt) == ppmReflectVertical (decompress qt)
 
 propChangeColor :: RGBARange -> RGBA -> QuadTree RGBA -> Bool
-propChangeColor range target qt = qtChangeColor range target qt == compress (ppmChangeColor range target (decompress qt))
+propChangeColor range target qt = decompress (qtChangeColor range target qt) == ppmChangeColor range target (decompress qt)
 
 propSaturate :: Double -> QuadTree RGBA -> Bool
-propSaturate x qt = qtSaturate x qt == compress (ppmSaturate x (decompress qt))
+propSaturate x qt = decompress (qtSaturate x qt) == ppmSaturate x (decompress qt)
 
 propGrayScale :: QuadTree RGBA -> Bool
-propGrayScale qt = qtGrayscale qt == compress (ppmGrayscale (decompress qt))
+propGrayScale qt = decompress (qtGrayscale qt) == ppmGrayscale (decompress qt)
 
 propBlur :: QuadTree RGBA -> Int -> Bool
-propBlur qt x = qtBlur qt x == compress (ppmBlur (decompress qt) x)
+propBlur qt x = decompress (qtBlur qt x) == ppmBlur (decompress qt) x
 
-propCrop :: QuadTree RGBA -> Int -> Int -> Int -> Int -> Bool
-propCrop qt x y z w = qtCrop x y z w qt == compress (ppmCrop x y z w (decompress qt))
+cropParams :: PPM -> Int -> Int -> Int -> Int -> (Int, Int, Int, Int)
+cropParams ppm a b c d =
+  let r1 = max 0 $ min a b
+   in let r2 = min (length ppm - 1) $ max a b
+       in let c1 = max 0 $ min c d
+           in let c2 = min (length (head ppm) - 1) $ max c d
+               in (min r1 r2, max r1 r2, min c1 c2, max c1 c2)
+
+-- Test propCrop on PPM because QuadTree does not maintain absolute coordinates of pixels
+propCrop :: PPMWrapper -> Int -> Int -> Int -> Int -> Bool
+propCrop ppmw a b c d =
+  let p = ppm ppmw
+   in let (r1, r2, c1, c2) = cropParams p a b c d
+       in decompress (qtCrop r1 r2 c1 c2 (compress p))
+            == ppmCrop r1 r2 c1 c2 p
 
 -- Begin test cases
 
@@ -234,11 +247,10 @@ qc = do
   quickCheck propSaturate
   putStrLn "Grayscale"
   quickCheck propGrayScale
-
--- putStrLn "Blur"
--- quickCheck propBlur
--- putStrLn "Crop"
--- quickCheck propCrop
+  -- putStrLn "Blur"
+  -- quickCheck propBlur
+  putStrLn "Crop"
+  quickCheck propCrop
 
 main :: IO ()
 main = do
