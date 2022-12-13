@@ -71,27 +71,27 @@ getSubMatrix x1 x2 y1 y2 ppm = map (getSubArray x1 x2) (getSubArray y1 y2 ppm)
 
 sameQTColor :: Eq e => QuadTree e -> QuadTree e -> Bool
 sameQTColor (Leaf (x, _, _)) (Leaf (y, _, _)) = x == y
--- sameQTColor (Leaf (x, _, _)) (LeafList pl) =
---   let (b, c) = colorPL pl in
---   b && (c == x)
--- sameQTColor (LeafList pl) (Leaf (y, _, _)) =
---   let (b, c) = colorPL pl in
---   b && (c == y)
--- sameQTColor (LeafList pl1) (LeafList pl2) =
---   let (b1, c1) = colorPL pl1 in
---   let (b2, c2) = colorPL pl2 in
---   b1 && b2 && (c1 == c2)
+sameQTColor (Leaf (x, _, _)) (LeafList pl) =
+  let (b, c) = colorPL pl in
+  b && (c == x)
+sameQTColor (LeafList pl) (Leaf (y, _, _)) =
+  let (b, c) = colorPL pl in
+  b && (c == y)
+sameQTColor (LeafList pl1) (LeafList pl2) =
+  let (b1, c1) = colorPL pl1 in
+  let (b2, c2) = colorPL pl2 in
+  b1 && b2 && (c1 == c2)
 sameQTColor _ _ = False
 
-color :: QuadTree e -> Maybe e
+color :: Eq e => QuadTree e -> Maybe e
 color (Leaf (x, _, _)) = Just x
--- color (LeafList pl) =
---   let (b, c) = colorPL pl in
---     if b then Just c else Nothing
+color (LeafList pl) =
+  let (b, c) = colorPL pl in
+    if b then Just c else Nothing
 color _ = Nothing
 
--- colorPL :: (Eq e, Show e) => PixelList e -> (Bool, e)
--- colorPL pl = traceShow pl foldr (\x (b, c) -> ((x == c) && b, c)) (True, (pixelData pl) !! 0) (pixelData pl)
+colorPL :: Eq e => PixelList e -> (Bool, e)
+colorPL pl = foldr (\x (b, c) -> ((x == c) && b, c)) (True, head $ pixelData pl) pl
 
 buildQuadTree :: Eq e => [[e]] -> QuadTree e
 buildQuadTree ppm@(w : ws) =
@@ -143,7 +143,7 @@ decompress :: QuadTree RGBA -> P.PPM
 decompress = buildPPM
 
 qtRotateLeft :: QuadTree e -> QuadTree e
-qtRotateLeft (Leaf x) = Leaf x
+qtRotateLeft (Leaf (x, i, j)) = Leaf (x, j, i)
 qtRotateLeft (LeafList pl) =
     LeafList PL {
       isHorizontal = not $ isHorizontal pl,
@@ -160,7 +160,7 @@ qtRotateLeft (QT tl tr bl br h w) = QT
   h
 
 qtRotateRight :: QuadTree e -> QuadTree e
-qtRotateRight (Leaf x) = Leaf x
+qtRotateRight (Leaf (x, i, j)) = Leaf (x, j, i)
 qtRotateRight (LeafList pl) =
     LeafList PL {
       isHorizontal = not $ isHorizontal pl,
@@ -226,9 +226,3 @@ qtBlur = undefined
 -- ints: upper left corner (x, y) and size (w, l)
 qtCrop :: Int -> Int -> Int -> Int -> QuadTree e -> QuadTree e
 qtCrop = undefined
-
--- Fails on Rotate Left
--- QT (Leaf ((202.31416365064572,12.587193235712554,96.80080352156087,160.01543169945634),1,1))
---   (LeafList (PL {isHorizontal = True, pixelData = [(208.5484188328414,13.366259421433847,10.294411286895267,131.0292175135899),(252.73349511527314,7.5814132834679295,197.15628850928678,242.7895447414606)]}))
---   (Leaf ((160.9124223339754,150.13605287848264,24.02981108240578,109.04092531929763),1,1))
---   (LeafList (PL {isHorizontal = True, pixelData = [(122.12805696893412,68.76566534170779,124.11001691173823,209.47069433619214),(53.65679534898248,147.87785146878716,229.79229822700026,236.41426661530258)]})) 2 3

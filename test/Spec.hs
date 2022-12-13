@@ -92,7 +92,7 @@ propDecompressCompressValid :: QuadTree RGBA -> Bool
 propDecompressCompressValid qt = qt == compress (decompress qt)
 
 propRotateLeft :: QuadTree RGBA -> Bool
-propRotateLeft qt = qtRotateLeft qt == compress (ppmRotateLeft (decompress qt))
+propRotateLeft qt = decompress (qtRotateLeft qt) == ppmRotateLeft (decompress qt)
 
 -- -- Compress and then decompress should yield same PPM
 -- propCompressDecompressValid :: PPM -> Bool
@@ -102,13 +102,13 @@ propRotateLeft qt = qtRotateLeft qt == compress (ppmRotateLeft (decompress qt))
 -- regardless of image representation (PPM and QuadTree)
 
 propRotateRight :: QuadTree RGBA -> Bool
-propRotateRight qt = qtRotateRight qt == compress (ppmRotateRight (decompress qt))
+propRotateRight qt = decompress (qtRotateRight qt) == ppmRotateRight (decompress qt)
 
 propReflectHorizontal :: QuadTree RGBA -> Bool
-propReflectHorizontal qt = qtReflectHorizontal qt == compress (ppmReflectHorizontal (decompress qt))
+propReflectHorizontal qt = decompress (qtReflectHorizontal qt) == ppmReflectHorizontal (decompress qt)
 
 propReflectVertical :: QuadTree RGBA -> Bool
-propReflectVertical qt = qtReflectVertical qt == compress (ppmReflectVertical (decompress qt))
+propReflectVertical qt = decompress (qtReflectVertical qt) == ppmReflectVertical (decompress qt)
 
 propChangeColor :: RGBARange -> RGBA -> QuadTree RGBA -> Bool
 propChangeColor range target qt = qtChangeColor range target qt == compress (ppmChangeColor range target (decompress qt))
@@ -186,13 +186,14 @@ testReflect =
       ]
 
 bad :: QuadTree RGBA
-bad = Leaf ((34.620296476646175, 66.90696916063584, 184.69778522264855, 37.54651105246145), 3, 3)
+bad = QT (Leaf ((137.61239733587485, 223.36502706515898, 68.28475064036621, 138.50580976970878), 1, 1)) (LeafList (PL {isHorizontal = True, pixelData = [(3.089512996552081, 216.7821256728732, 177.99180609349364, 47.44186640041945), (60.07791449643962, 210.77062666812282, 173.82683671966993, 87.66751296892083)]})) (Leaf ((236.4446672977997, 59.76664264570588, 104.92565927222985, 236.80402599226608), 1, 1)) (LeafList (PL {isHorizontal = True, pixelData = [(81.32314569596649, 181.41484790059405, 38.537272388234, 120.23963543855334), (173.83028039169733, 39.61689084185856, 57.82888766556308, 73.98461387010298)]})) 2 3
 
 testBad :: Test
 testBad =
   "bad"
     ~: TestList
-      [ qtGrayscale bad ~?= compress (ppmGrayscale (decompress bad))
+      [ qtReflectHorizontal bad ~?= compress (ppmReflectHorizontal (decompress bad)),
+        qtReflectHorizontal bad ~?= whiteQT
       ]
 
 test_woke :: IO Counts

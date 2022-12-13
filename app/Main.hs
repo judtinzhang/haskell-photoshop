@@ -11,9 +11,9 @@ main = do
   case p of
     Nothing -> print "error"
     Just ppm -> do
-      let qt = qtRotateLeft $ compress ppm
+      -- let qt = qtRotateLeft $ compress ppm
       -- let qt = qtChangeColor yellow (0, 0, 255, 255) $ compress ppm
-      -- let qt = qtRotateRight $ qtGrayscale $ qtReflectVertical $ compress ppm
+      let qt = qtRotateRight $ qtGrayscale $ qtReflectVertical $ compress ppm
       let image = writeOutput $ (decompress qt)
       -- let transformed = ppmChangeColor yellow (0, 0, 200, 255) ppm
       -- let transformed = ppmRotateRight ppm
