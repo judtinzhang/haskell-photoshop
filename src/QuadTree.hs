@@ -20,6 +20,7 @@ import Data.Foldable qualified as Foldable
 import PPM qualified as P (PPM, ppmCrop)
 import Pixel
 import Debug.Trace
+import Data.Maybe (isJust)
 
 -- ================= DEBUGGING =========================
 
@@ -153,22 +154,29 @@ recompress qt@(QT tl tr bl br h w) =
 recompress x = x
 
 qtGetColor :: Int -> Int -> QuadTree e -> Maybe e
-qtGetColor _ _ (Leaf (c, _, _)) = Just c
-qtGetColor y x (LeafList pl) =
-  if isHorizontal pl && y > 1 || not (isHorizontal pl) && x > 1
+qtGetColor y x (Leaf (c, h, w)) =
+  if y < 0 || x < 0 || y >= h || x >= w
     then Nothing
-    else Just $ pixelData pl !! max y x
+    else Just c
+qtGetColor y x (LeafList pl) =
+  let len = length $ pixelData pl in
+  if isHorizontal pl && (y /= 0 || y >= len || x < 0 || x >= len) || not (isHorizontal pl) && (x /= 0 || y < 0 || y >= len)
+    then Nothing
+    else Just $ if isHorizontal pl then pixelData pl !! x else pixelData pl !! y
 qtGetColor y x (QT tl tr bl br h w) =
-  let x_mid = w `div` 2  in
-  let y_mid = h `div` 2 in
-  if y < y_mid then
-    if x < x_mid
-      then qtGetColor y x tl
-      else qtGetColor y (x - x_mid) tr
-  else
-    if x < x_mid
-      then qtGetColor (y - y_mid) x bl
-      else qtGetColor (y - y_mid) (x - x_mid) br
+  if y < 0 || x < 0 || y >= h || x >= w
+    then Nothing
+    else
+      let x_mid = w `div` 2  in
+      let y_mid = h `div` 2 in
+      if y < y_mid then
+        if x < x_mid
+          then qtGetColor y x tl
+          else qtGetColor y (x - x_mid) tr
+      else
+        if x < x_mid
+          then qtGetColor (y - y_mid) x bl
+          else qtGetColor (y - y_mid) (x - x_mid) br
 
 qtRotateLeft :: QuadTree e -> QuadTree e
 qtRotateLeft (Leaf (x, i, j)) = Leaf (x, j, i)
@@ -247,8 +255,58 @@ qtSaturate c qt = recompress ((fmap $ pixelSaturate c) qt)
 qtGrayscale :: QuadTree RGBA -> QuadTree RGBA
 qtGrayscale qt = recompress (fmap pixelGrayScale qt)
 
-qtBlur :: QuadTree e -> Int -> QuadTree e
-qtBlur = undefined
+validIndex :: QuadTree RGBA -> Int -> Int -> Bool
+validIndex qt i j = isJust $ qtGetColor i j qt
+
+updateAvg :: QuadTree RGBA -> Int -> Int -> (RGBA, Double) -> (RGBA, Double)
+updateAvg qt i j t@((r, g, b, a), count) =
+  if validIndex qt i j
+    then
+      case qtGetColor i j qt of
+        Nothing -> error "Get Color should never return Nothing here"
+        Just c ->
+          let (r', g', b', a') = c
+          in ((r + r', g + g', b + b', a + a'), count + 1)
+    else t
+
+neighborList :: Int -> Int -> Int -> [(Int, Int)]
+neighborList i j radius = neighborListHelper i j radius (i - radius) (j - radius)
+
+neighborListHelper :: Int -> Int -> Int -> Int -> Int -> [(Int, Int)]
+neighborListHelper i j radius curri currj =
+  if curri == i + radius
+    then
+      if currj == j + radius
+        then []
+        else (curri, currj) : neighborListHelper i j radius (i - radius) (currj + 1)
+    else (curri, currj) : neighborListHelper i j radius (curri + 1) currj
+
+neighborAvg :: Int -> Int -> Int -> QuadTree RGBA -> RGBA
+neighborAvg i j radius qt =
+  let nl = neighborList i j radius
+   in let (p, count) = foldr (\(i, j) acc -> updateAvg qt i j acc) ((0, 0, 0, 0), 0) nl
+       in mapRGBA (/ count) p
+
+qtBlurHelper :: QuadTree RGBA -> Int -> Int -> Int -> Int -> P.PPM
+qtBlurHelper qt v radius h w =
+  if v < h
+    then qtBlurRow qt v 0 radius w : qtBlurHelper qt (v + 1) radius h w
+    else []
+
+qtBlurRow :: QuadTree RGBA -> Int -> Int -> Int -> Int -> [RGBA]
+qtBlurRow qt i j radius w =
+  if j < w
+    then neighborAvg i j radius qt : qtBlurRow qt i (j + 1) radius w
+    else []
+
+qtBlur :: QuadTree RGBA -> Int -> QuadTree RGBA
+qtBlur qt@(Leaf _) _ = qt
+qtBlur qt@(LeafList pl) radius =
+  let h = if isHorizontal pl then 1 else length $ pixelData pl in
+  let w = if isHorizontal pl then length $ pixelData pl else 1 in
+  compress (qtBlurHelper qt 0 radius h w)
+qtBlur qt@(QT tl tr bl br h w) radius = compress (qtBlurHelper qt 0 radius h w)
+
 
 -- ints: upper left corner (x, y) and size (w, l)
 qtCrop :: Int -> Int -> Int -> Int -> QuadTree RGBA -> QuadTree RGBA

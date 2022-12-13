@@ -2,17 +2,30 @@ import PPM
 import Pixel
 import QuadTree
 import Test.HUnit
+  ( Counts,
+    Test (TestList),
+    runTestTT,
+    (~:),
+    (~?=),
+  )
 import Test.QuickCheck
 
 newtype RGBAWrapper = RGBAW {rgba :: RGBA}
 
+rounded :: Double -> Double
+rounded x = fromIntegral $ round x
+
 instance Arbitrary RGBAWrapper where
+  arbitrary :: Gen RGBAWrapper
   arbitrary = do
     r <- choose (1, 5)
     g <- choose (1, 5)
     b <- choose (1, 5)
     a <- choose (1, 5)
-    return $ RGBAW {rgba = (r, g, b, a)}
+    -- let d_g = (fromIntegral . round) g
+    -- let d_b = (fromIntegral . round) b
+    -- let d_a = (fromIntegral . round) a
+    return $ RGBAW {rgba = (rounded r, rounded g, rounded b, rounded a)}
 
 newtype PPMWrapper = PPMW {ppm :: PPM}
   deriving (Show)
@@ -60,7 +73,7 @@ genQuadTree h 1 = do
   return $ LeafList PL {isHorizontal = False, pixelData = pData}
 genQuadTree h w =
   frequency
-    [ (h + w, genQT h w),
+    [ (10 * (h + w), genQT h w),
       (1, genLeaf h w)
     ]
 
@@ -134,8 +147,8 @@ propSaturate x qt = decompress (qtSaturate x qt) == ppmSaturate x (decompress qt
 propGrayScale :: QuadTree RGBA -> Bool
 propGrayScale qt = decompress (qtGrayscale qt) == ppmGrayscale (decompress qt)
 
-propBlur :: QuadTree RGBA -> Int -> Bool
-propBlur qt x = decompress (qtBlur qt x) == ppmBlur (decompress qt) x
+propBlur :: QuadTree RGBA -> Int -> Property
+propBlur qt x = x > 0 ==> decompress (qtBlur qt (min 5 x)) == ppmBlur (decompress qt) (min 5 x)
 
 validRanges :: PPM -> Int -> Int -> Int -> Int -> (Int, Int, Int, Int)
 validRanges ppm a b c d =
@@ -239,17 +252,21 @@ testGrayScale =
         qtGrayscale whiteQT ~?= compress (ppmGrayscale (decompress whiteQT))
       ]
 
+-- tPT = QT (Leaf ((2.0, 4.0, 4.0, 4.0), 1, 1)) (Leaf ((2.0, 1.0, 5.0, 3.0), 1, 1)) (Leaf ((3.0, 3.0, 1.0, 3.0), 1, 1)) (Leaf ((4.0, 3.0, 2.0, 1.0), 1, 1)) 2 2
+
+-- qtGetColor (-1) (-1) tPT
 -- testBad :: Test
 -- testBad =
 --   "testBad"
 --     ~: TestList
---       [qtGetColor 1 0 (compress whiteBlackPPM) ~?= Just black]
+--       [decompress (qtBlur tPT 1) ~?= ppmBlur (decompress tPT) 1]
 
 test_all :: IO Counts
 test_all = runTestTT $ TestList [testCompress, testDecompress, testRotate, testReflect, testGrayScale]
 
 -- test_all = runTestTT $ TestList [testBad]
 
+-- [[(2.5,3.0,3.0,2.5),(2.5,3.0,3.0,2.5)]]
 qc :: IO ()
 qc = do
   putStrLn "Decompress Compress"
@@ -272,8 +289,8 @@ qc = do
   quickCheck propSaturate
   putStrLn "Grayscale"
   quickCheck propGrayScale
-  -- putStrLn "Blur"
-  -- quickCheck propBlur
+  putStrLn "Blur"
+  quickCheck propBlur
   putStrLn "Crop"
   quickCheck propCrop
   putStrLn "Get Color"
@@ -282,4 +299,6 @@ qc = do
 main :: IO ()
 main = do
   -- test_all
+  -- print "hi"
+
   qc
