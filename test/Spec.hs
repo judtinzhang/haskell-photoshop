@@ -1,39 +1,30 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Redundant return" #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
-
-import Data.Vector (create)
-import Data.Vector qualified as V
-import IO
 import PPM
 import Pixel
 import QuadTree
-import System.Random
 import Test.HUnit
-import Test.QuickCheck (Arbitrary (arbitrary, shrink), quickCheck)
-import Test.QuickCheck qualified as QC
+import Test.QuickCheck
 
-newtype RGBAWrapper = RGBAW
-  { rgba :: RGBA
-  }
+newtype RGBAWrapper = RGBAW {rgba :: RGBA}
 
 instance Arbitrary RGBAWrapper where
   arbitrary = do
-    r <- QC.choose (0, 255)
-    g <- QC.choose (0, 255)
-    b <- QC.choose (0, 255)
-    a <- QC.choose (0, 255)
+    r <- choose (0, 255)
+    g <- choose (0, 255)
+    b <- choose (0, 255)
+    a <- choose (0, 255)
     return $ RGBAW {rgba = (r, g, b, a)}
 
-newtype PPMWrapper = PPMW
-  { ppm :: PPM
-  }
+newtype PPMWrapper = PPMW {ppm :: PPM}
+  deriving (Show)
 
 instance Arbitrary PPMWrapper where
+  arbitrary :: Gen PPMWrapper
   arbitrary = do
-    -- pData <- QC.vectorOf w (do rgba <$> arbitrary)
-    return $ PPMW []
+    qt <- arbitrary :: Gen (QuadTree RGBA)
+    return $ PPMW $ decompress qt
+
+  shrink :: PPMWrapper -> [PPMWrapper]
+  shrink _ = []
 
 instance Arbitrary RGBARange where
   arbitrary = undefined
@@ -42,24 +33,21 @@ instance Arbitrary RGBARange where
   shrink :: RGBARange -> [RGBARange]
   shrink _ = []
 
-genQuadTree :: Int -> Int -> QC.Gen (QuadTree RGBA)
+genQuadTree :: Int -> Int -> Gen (QuadTree RGBA)
 genQuadTree 1 1 = genLeaf 1 1
 genQuadTree 1 w = do
-  pData <- QC.vectorOf w (do rgba <$> arbitrary)
+  pData <- vectorOf w (do rgba <$> arbitrary)
   return $ LeafList PL {isHorizontal = True, pixelData = pData}
 genQuadTree h 1 = do
-  pData <- QC.vectorOf h (do rgba <$> arbitrary)
+  pData <- vectorOf h (do rgba <$> arbitrary)
   return $ LeafList PL {isHorizontal = False, pixelData = pData}
 genQuadTree h w =
-  QC.frequency
+  frequency
     [ (h + w, genQT h w),
       (1, genLeaf h w)
     ]
 
--- Bug: QuadTree doesn't generate leaves that are not squares
--- Bug: QuadTree doesn't combine pixelLists and leaves of same color
-
-genQT :: Int -> Int -> QC.Gen (QuadTree RGBA)
+genQT :: Int -> Int -> Gen (QuadTree RGBA)
 genQT h w = do
   let w_len_1 = w `div` 2
   let w_len_2 = w - w_len_1
@@ -71,21 +59,23 @@ genQT h w = do
   br <- genQuadTree h_len_2 w_len_2
   return $ QT tl tr bl br h w
 
-genLeaf :: Int -> Int -> QC.Gen (QuadTree RGBA)
+genLeaf :: Int -> Int -> Gen (QuadTree RGBA)
 genLeaf h w = do
-  wrapper <- arbitrary :: QC.Gen RGBAWrapper
+  wrapper <- arbitrary :: Gen RGBAWrapper
   return $ Leaf (rgba wrapper, h, w)
 
 instance Arbitrary (QuadTree RGBA) where
-  arbitrary :: QC.Gen (QuadTree RGBA)
+  arbitrary :: Gen (QuadTree RGBA)
   arbitrary = do
-    w <- QC.suchThat arbitrary (> 0)
-    h <- QC.suchThat arbitrary (> 0)
+    w <- suchThat arbitrary (> 0)
+    h <- suchThat arbitrary (> 0)
     genQuadTree h w
 
   shrink :: QuadTree RGBA -> [QuadTree RGBA]
   shrink (QT tl tr bl br _ _) = [tl, tr, bl, br]
   shrink _ = []
+
+-- Begin QuickCheck
 
 -- Decompress and then compress should yield same QuadTree
 propDecompressCompressValid :: QuadTree RGBA -> Bool
@@ -94,9 +84,9 @@ propDecompressCompressValid qt = qt == compress (decompress qt)
 propRotateLeft :: QuadTree RGBA -> Bool
 propRotateLeft qt = decompress (qtRotateLeft qt) == ppmRotateLeft (decompress qt)
 
--- -- Compress and then decompress should yield same PPM
--- propCompressDecompressValid :: PPM -> Bool
--- propCompressDecompressValid ppm = ppm == decompress (compress ppm)
+-- Compress and then decompress should yield same PPM
+propCompressDecompressValid :: PPMWrapper -> Bool
+propCompressDecompressValid ppmw = ppm ppmw == decompress (compress $ ppm ppmw)
 
 -- Property tests assert that operators should output the same result
 -- regardless of image representation (PPM and QuadTree)
@@ -145,6 +135,16 @@ whiteBlackPPM = [[black, white], [white, white]]
 whiteBlackQT :: QuadTree RGBA
 whiteBlackQT = QT (Leaf (black, 1, 1)) (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) 2 2
 
+advancedQT :: QuadTree RGBA
+advancedQT =
+  QT
+    (Leaf ((137, 223, 68, 138), 1, 1))
+    (LeafList (PL {isHorizontal = True, pixelData = [(3, 216, 177, 47), (60, 210, 173, 87)]}))
+    (Leaf ((236, 59, 104, 236), 1, 1))
+    (LeafList (PL {isHorizontal = True, pixelData = [(81, 181, 38, 120), (173, 39, 57, 73)]}))
+    2
+    3
+
 testCompress :: Test
 testCompress =
   "Compress"
@@ -185,29 +185,23 @@ testReflect =
         ppmReflectHorizontal whiteBlackPPM ~?= [[white, black], [white, white]]
       ]
 
-bad :: QuadTree RGBA
-bad = QT (Leaf ((137.61239733587485, 223.36502706515898, 68.28475064036621, 138.50580976970878), 1, 1)) (LeafList (PL {isHorizontal = True, pixelData = [(3.089512996552081, 216.7821256728732, 177.99180609349364, 47.44186640041945), (60.07791449643962, 210.77062666812282, 173.82683671966993, 87.66751296892083)]})) (Leaf ((236.4446672977997, 59.76664264570588, 104.92565927222985, 236.80402599226608), 1, 1)) (LeafList (PL {isHorizontal = True, pixelData = [(81.32314569596649, 181.41484790059405, 38.537272388234, 120.23963543855334), (173.83028039169733, 39.61689084185856, 57.82888766556308, 73.98461387010298)]})) 2 3
-
-testBad :: Test
-testBad =
-  "bad"
+testGrayScale :: Test
+testGrayScale =
+  "Gray Scale"
     ~: TestList
-      [ qtReflectHorizontal bad ~?= compress (ppmReflectHorizontal (decompress bad)),
-        qtReflectHorizontal bad ~?= whiteQT
+      [ qtGrayscale advancedQT ~?= compress (ppmGrayscale (decompress advancedQT)),
+        qtGrayscale whiteQT ~?= compress (ppmGrayscale (decompress whiteQT))
       ]
 
-test_woke :: IO Counts
-test_woke = runTestTT $ TestList [testBad]
-
 test_all :: IO Counts
-test_all = runTestTT $ TestList [testCompress, testDecompress, testRotate, testReflect]
+test_all = runTestTT $ TestList [testCompress, testDecompress, testRotate, testReflect, testGrayScale]
 
 qc :: IO ()
 qc = do
   putStrLn "Decompress Compress"
   quickCheck propDecompressCompressValid
-  -- putStrLn "Compress Decompress"
-  -- quickCheck propCompressDecompressValid
+  putStrLn "Compress Decompress"
+  quickCheck propCompressDecompressValid
   putStrLn "Rotate Left"
   quickCheck propRotateLeft
   putStrLn "Rotate Right"
@@ -230,8 +224,5 @@ qc = do
 
 main :: IO ()
 main = do
+  test_all
   qc
-
--- test_woke
--- test_all
--- print "hi"

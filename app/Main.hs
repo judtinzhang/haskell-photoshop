@@ -7,7 +7,7 @@ import QuadTree
 
 main :: IO ()
 main = do
-  p <- readInput "car.png"
+  p <- readInput "crab.png"
   case p of
     Nothing -> print "error"
     Just ppm -> do
@@ -21,15 +21,8 @@ main = do
       -- let transformed = ppmCrop 100 500 200 900 ppm
       toPng (ImageRGBA8 image)
 
--- Ask about
--- arbitrary and QC, design of arbitrary QT?
--- how to overwrite arbitrary for RGBA
-
 -- abstract out user interface
 -- benchmarking
-
 -- stack exec project-cis5520-exe
-
 -- new type to wrap PPM / RGBA
-
 -- Data.Vector
