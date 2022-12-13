@@ -298,7 +298,5 @@ qc = do
 
 main :: IO ()
 main = do
-  -- test_all
-  -- print "hi"
-
+  test_all
   qc

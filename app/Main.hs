@@ -7,11 +7,11 @@ import QuadTree
 
 main :: IO ()
 main = do
-  p <- readInput "crab.png"
+  p <- readInput "mountains.png"
   case p of
     Nothing -> print "error"
     Just ppm -> do
-      let qt = qtBlur (compress ppm) 3
+      let qt = lossyCompress 60 ppm
       -- let qt = qtChangeColor yellow (100, 100, 255, 50) $ compress ppm
       -- let qt = qtRotateRight $ qtGrayscale $ qtReflectVertical $ compress ppm
       let image = writeOutput (decompress qt)

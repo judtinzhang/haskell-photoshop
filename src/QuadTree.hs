@@ -14,6 +14,7 @@ module QuadTree (
     qtGetColor,
     qtCrop,
     testQT,
+    lossyCompress
 ) where
 
 import Data.Foldable qualified as Foldable
@@ -85,6 +86,27 @@ sameQTColor (LeafList pl1) (LeafList pl2) =
   b1 && b2 && (c1 == c2)
 sameQTColor _ _ = False
 
+closeQTColor :: Int -> QuadTree RGBA -> QuadTree RGBA -> Bool
+closeQTColor s (Leaf (x, _, _)) (Leaf (y, _, _)) = closeColor s x y
+closeQTColor s (Leaf (x, _, _)) (LeafList pl) =
+  let (b, c) = closeColorPL s pl in
+  b && closeColor s x c
+closeQTColor s (LeafList pl) (Leaf (y, _, _)) =
+  let (b, c) = closeColorPL s pl in
+  b && closeColor s y c
+closeQTColor s (LeafList pl1) (LeafList pl2) =
+  let (b1, c1) = closeColorPL s pl1 in
+  let (b2, c2) = closeColorPL s pl2 in
+  b1 && b2 && closeColor s c1 c2
+closeQTColor _ _ _ = False
+
+closeColor :: Int -> RGBA -> RGBA -> Bool
+closeColor s (r1, g1, b1, a1) (r2, g2, b2, a2) =
+  round (abs (r1 - r2)) < s &&
+  round (abs (g1 - g2)) < s &&
+  round (abs (b1 - b2)) < s &&
+  round (abs (a1 - a2)) < s
+
 color :: Eq e => QuadTree e -> Maybe e
 color (Leaf (x, _, _)) = Just x
 color (LeafList pl) =
@@ -92,8 +114,18 @@ color (LeafList pl) =
     if b then Just c else Nothing
 color _ = Nothing
 
+lossyColor :: Int -> QuadTree RGBA -> Maybe RGBA
+lossyColor s (Leaf (x, _, _)) = Just x
+lossyColor s (LeafList pl) =
+  let (b, c) = closeColorPL s pl in
+    if b then Just c else Nothing
+lossyColor _ _ = Nothing
+
 colorPL :: Eq e => PixelList e -> (Bool, e)
 colorPL pl = foldr (\x (b, c) -> ((x == c) && b, c)) (True, head $ pixelData pl) pl
+
+closeColorPL :: Int -> PixelList RGBA -> (Bool, RGBA)
+closeColorPL s pl = foldr (\x (b, c) -> (closeColor s x c && b, c)) (True, head $ pixelData pl) pl
 
 buildQuadTree :: Eq e => [[e]] -> QuadTree e
 buildQuadTree ppm@(w : ws) =
@@ -311,3 +343,30 @@ qtBlur qt@(QT tl tr bl br h w) radius = compress (qtBlurHelper qt 0 radius h w)
 -- ints: upper left corner (x, y) and size (w, l)
 qtCrop :: Int -> Int -> Int -> Int -> QuadTree RGBA -> QuadTree RGBA
 qtCrop r1 r2 c1 c2 qt = compress (P.ppmCrop r1 r2 c1 c2 (decompress qt))
+
+lossyCompress :: Int -> P.PPM -> QuadTree RGBA
+lossyCompress s ppm@(w : ws) =
+  let y_len = length ppm in
+  let x_len = length w in
+  let x_mid = x_len `div` 2  in
+  let y_mid = y_len `div` 2 in
+  if x_len == 1 && y_len == 1
+    then Leaf (head $ head ppm, 1, 1)
+    else
+      if x_len == 1 || y_len == 1
+        then
+          LeafList PL {
+            isHorizontal = y_len == 1,
+            pixelData = concat ppm
+          }
+        else
+          let tl = lossyCompress s $ getSubMatrix 0 x_mid 0 y_mid ppm in
+          let tr = lossyCompress s $ getSubMatrix x_mid x_len 0 y_mid ppm in
+          let bl = lossyCompress s $ getSubMatrix 0 x_mid y_mid y_len ppm in
+          let br = lossyCompress s $ getSubMatrix x_mid x_len y_mid y_len ppm in
+          if closeQTColor s tl tr && closeQTColor s tr bl && closeQTColor s bl br
+            then case lossyColor s tl of
+              Just c -> Leaf (c, y_len, x_len)
+              Nothing -> error "impossible color"
+            else QT tl tr bl br (length ppm) (length w)
+lossyCompress _ [] = error "QT cannot accept empty image"
