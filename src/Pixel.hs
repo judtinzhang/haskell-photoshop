@@ -83,6 +83,7 @@ data RGBARange = RGBARange
     blueRange :: (Double, Double),
     alphaRange :: (Double, Double)
   }
+  deriving (Show, Eq)
 
 yellow :: RGBARange
 yellow =

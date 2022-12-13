@@ -116,7 +116,7 @@ data IOFile
   = JPG String
   | PNG String
 
--- data ImageRep 
+-- data ImageRep
 --   = PpmRep P.PPM
 --   | QtRep (QT.QuadTree P.RGBA)
 
