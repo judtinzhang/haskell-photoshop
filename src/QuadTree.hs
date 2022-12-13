@@ -142,6 +142,15 @@ compress = buildQuadTree
 decompress :: QuadTree RGBA -> P.PPM
 decompress = buildPPM
 
+recompress :: Eq e => QuadTree e -> QuadTree e
+recompress qt@(QT tl tr bl br h w) =
+  if sameQTColor tl tr && sameQTColor tr bl && sameQTColor bl br
+    then case color tl of
+      Just c -> Leaf (c, h, w)
+      Nothing -> error "impossible color"
+    else qt
+recompress x = x
+
 qtRotateLeft :: QuadTree e -> QuadTree e
 qtRotateLeft (Leaf (x, i, j)) = Leaf (x, j, i)
 qtRotateLeft (LeafList pl) =
@@ -210,15 +219,14 @@ qtReflectVertical (QT tl tr bl br h w) = QT
   h
   w
 
--- TODO: have a recompress function for things like this
 qtChangeColor :: RGBARange -> RGBA -> QuadTree RGBA -> QuadTree RGBA
-qtChangeColor range target = fmap $ pixelChangeColor range target
+qtChangeColor range target qt = recompress ((fmap $ pixelChangeColor range target) qt)
 
 qtSaturate :: Double -> QuadTree RGBA -> QuadTree RGBA
-qtSaturate c = fmap $ pixelSaturate c
+qtSaturate c qt = recompress ((fmap $ pixelSaturate c) qt)
 
 qtGrayscale :: QuadTree RGBA -> QuadTree RGBA
-qtGrayscale = fmap pixelGrayScale
+qtGrayscale qt = recompress (fmap pixelGrayScale qt)
 
 qtBlur :: QuadTree e -> Int -> QuadTree e
 qtBlur = undefined

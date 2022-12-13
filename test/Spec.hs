@@ -3,15 +3,16 @@ import Pixel
 import QuadTree
 import Test.HUnit
 import Test.QuickCheck
+import Test.QuickCheck (Arbitrary (arbitrary))
 
 newtype RGBAWrapper = RGBAW {rgba :: RGBA}
 
 instance Arbitrary RGBAWrapper where
   arbitrary = do
-    r <- choose (0, 255)
-    g <- choose (0, 255)
-    b <- choose (0, 255)
-    a <- choose (0, 255)
+    r <- choose (1, 5)
+    g <- choose (1, 5)
+    b <- choose (1, 5)
+    a <- choose (1, 5)
     return $ RGBAW {rgba = (r, g, b, a)}
 
 newtype PPMWrapper = PPMW {ppm :: PPM}
@@ -26,8 +27,25 @@ instance Arbitrary PPMWrapper where
   shrink :: PPMWrapper -> [PPMWrapper]
   shrink _ = []
 
+genRGBARange :: Gen (Double, Double)
+genRGBARange = do
+  x <- choose (0, 255)
+  y <- choose (0, 255)
+  if x < y then return (x, y) else return (y, x)
+
 instance Arbitrary RGBARange where
-  arbitrary = undefined
+  arbitrary = do
+    rRange <- genRGBARange
+    gRange <- genRGBARange
+    bRange <- genRGBARange
+    aRange <- genRGBARange
+    return $
+      RGBARange
+        { redRange = rRange,
+          greenRange = gRange,
+          blueRange = bRange,
+          alphaRange = aRange
+        }
 
   -- arbitrary = RGBARange <$> (arbitrary, arbitrary, arbitrary, arbitrary)
   shrink :: RGBARange -> [RGBARange]
@@ -210,8 +228,8 @@ qc = do
   quickCheck propReflectHorizontal
   putStrLn "Reflect Vertical"
   quickCheck propReflectVertical
-  -- putStrLn "Change RGBA"
-  -- quickCheck propChangeColor
+  putStrLn "Change RGBA"
+  quickCheck propChangeColor
   putStrLn "Saturate"
   quickCheck propSaturate
   putStrLn "Grayscale"
