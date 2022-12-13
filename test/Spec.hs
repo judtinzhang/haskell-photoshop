@@ -18,13 +18,10 @@ rounded x = fromIntegral $ round x
 instance Arbitrary RGBAWrapper where
   arbitrary :: Gen RGBAWrapper
   arbitrary = do
-    r <- choose (1, 5)
-    g <- choose (1, 5)
-    b <- choose (1, 5)
-    a <- choose (1, 5)
-    -- let d_g = (fromIntegral . round) g
-    -- let d_b = (fromIntegral . round) b
-    -- let d_a = (fromIntegral . round) a
+    r <- choose (4, 5)
+    g <- choose (4, 5)
+    b <- choose (4, 5)
+    a <- choose (4, 5)
     return $ RGBAW {rgba = (rounded r, rounded g, rounded b, rounded a)}
 
 newtype PPMWrapper = PPMW {ppm :: PPM}
