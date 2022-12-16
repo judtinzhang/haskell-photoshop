@@ -41,7 +41,8 @@ convertToImage i =
     gen x y =
       case getColor y x i of
         Nothing -> error "Error: Dimensions out of bounds"
-        Just (r, g, b, a) -> PixelRGBA8 (toPixel8 r) (toPixel8 g) (toPixel8 b) (toPixel8 a)
+        Just (r, g, b, a) ->
+          PixelRGBA8 (toPixel8 r) (toPixel8 g) (toPixel8 b) (toPixel8 a)
 
 toJpg :: QuadTree RGBA -> String -> IO ()
 toJpg p out_file =
@@ -52,8 +53,6 @@ toPng :: QuadTree RGBA -> String -> IO ()
 toPng p out_file =
   let image = convertToImage p
    in savePngImage out_file (ImageRGBA8 image)
-
--- ================= Image Processing ===========================
 
 -- Represents a 1 x n or n x 1 set of pixels in our QuadTree,
 -- which cannot be further compressed
@@ -152,7 +151,9 @@ lossyCompress s (QT tl tr bl br h w) =
   let tr_loss = lossyCompress s tr in
   let bl_loss = lossyCompress s bl in
   let br_loss = lossyCompress s br in
-  if closeQTColor s tl_loss tr_loss && closeQTColor s tr_loss bl_loss && closeQTColor s bl_loss br_loss
+  if closeQTColor s tl_loss tr_loss
+    && closeQTColor s tr_loss bl_loss
+    && closeQTColor s bl_loss br_loss
     then case lossyColor s tl_loss of
       Just c -> Leaf (c, h, w)
       Nothing -> error "impossible color"
@@ -173,7 +174,10 @@ getSubMatrix x1 x2 y1 y2 ppm = map (getSubArray x1 x2) (getSubArray y1 y2 ppm)
 -- Returns size of QuadTree in form (h, w)
 size :: QuadTree e -> (Int, Int)
 size (QT _ _ _ _ h w) = (h, w)
-size (LeafList pl) = if isHorizontal pl then (1, length $ pixelData pl) else (length $ pixelData pl, 1)
+size (LeafList pl) =
+  if isHorizontal pl
+    then (1, length $ pixelData pl)
+    else (length $ pixelData pl, 1)
 size (Leaf (_, h, w)) = (h, w)
 
 -- Checks if two QuadTrees have same color (note this only applies
@@ -239,7 +243,8 @@ colorPL pl = foldr (\x (b, c) -> ((x == c) && b, c)) (True, head $ pixelData pl)
 
 -- Returns the color of the closest RGBA value of a PixelList
 closeColorPL :: Int -> PixelList RGBA -> (Bool, RGBA)
-closeColorPL s pl = foldr (\x (b, c) -> (closeColor s x c && b, c)) (True, head $ pixelData pl) pl
+closeColorPL s pl = foldr
+  (\x (b, c) -> (closeColor s x c && b, c)) (True, head $ pixelData pl) pl
 
 -- Gets the color of a given x, y coordinate in a QuadTree
 getColor :: Int -> Int -> QuadTree e -> Maybe e
@@ -249,7 +254,8 @@ getColor y x (Leaf (c, h, w)) =
     else Just c
 getColor y x (LeafList pl) =
   let len = length $ pixelData pl in
-  if isHorizontal pl && (y /= 0 || x < 0 || x >= len) || not (isHorizontal pl) && (x /= 0 || y < 0 || y >= len)
+  if isHorizontal pl && (y /= 0 || x < 0 || x >= len)
+    || not (isHorizontal pl) && (x /= 0 || y < 0 || y >= len)
     then Nothing
     else Just $ if isHorizontal pl then pixelData pl !! x else pixelData pl !! y
 getColor y x (QT tl tr bl br h w) =
@@ -271,7 +277,7 @@ getColor y x (QT tl tr bl br h w) =
 validIndex :: QuadTree RGBA -> Int -> Int -> Bool
 validIndex qt i j = isJust $ getColor i j qt
 
--- ================= User Functions ===========================
+-- ================= Image Processing Functions ===========================
 
 rotateLeft :: QuadTree e -> QuadTree e
 rotateLeft (Leaf (x, i, j)) = Leaf (x, j, i)

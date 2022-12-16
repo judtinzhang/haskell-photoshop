@@ -1,6 +1,12 @@
 import PPM qualified as P
 import Pixel
-import QuadTree (PixelList (..), QuadTree (Leaf, LeafList, QT), compress, decompress, recompress)
+import QuadTree
+  ( PixelList (..),
+    QuadTree (Leaf, LeafList, QT),
+    compress,
+    decompress,
+    recompress,
+  )
 import QuadTree qualified as QT
 import Test.HUnit
   ( Counts,
@@ -148,13 +154,19 @@ propRotateRight :: QT.QuadTree RGBA -> Bool
 propRotateRight qt = decompress (QT.rotateRight qt) == P.rotateRight (decompress qt)
 
 propReflectHorizontal :: QT.QuadTree RGBA -> Bool
-propReflectHorizontal qt = decompress (QT.reflectHorizontal qt) == P.reflectHorizontal (decompress qt)
+propReflectHorizontal qt =
+  decompress (QT.reflectHorizontal qt)
+    == P.reflectHorizontal (decompress qt)
 
 propReflectVertical :: QT.QuadTree RGBA -> Bool
-propReflectVertical qt = decompress (QT.reflectVertical qt) == P.reflectVertical (decompress qt)
+propReflectVertical qt =
+  decompress (QT.reflectVertical qt)
+    == P.reflectVertical (decompress qt)
 
 propChangeColor :: RGBARange -> RGBA -> QT.QuadTree RGBA -> Bool
-propChangeColor range target qt = decompress (QT.changeColor range target qt) == P.changeColor range target (decompress qt)
+propChangeColor range target qt =
+  decompress (QT.changeColor range target qt)
+    == P.changeColor range target (decompress qt)
 
 propSaturate :: Double -> QT.QuadTree RGBA -> Bool
 propSaturate x qt = decompress (QT.saturate x qt) == P.saturate x (decompress qt)
@@ -163,7 +175,11 @@ propGrayScale :: QT.QuadTree RGBA -> Bool
 propGrayScale qt = decompress (QT.grayscale qt) == P.grayscale (decompress qt)
 
 propBlur :: QT.QuadTree RGBA -> Int -> Property
-propBlur qt x = x > 0 ==> decompress (QT.blur qt (min 5 x)) == P.blur (decompress qt) (min 5 x)
+propBlur qt x =
+  x
+    > 0
+    ==> decompress (QT.blur qt (min 5 x))
+    == P.blur (decompress qt) (min 5 x)
 
 -- Test propCrop on PPM because QuadTree does not maintain absolute coordinates of pixels
 propCrop :: PPMWrapper -> Int -> Int -> Int -> Int -> Bool
@@ -199,7 +215,14 @@ whiteBlackPPM :: P.PPM
 whiteBlackPPM = [[black, white], [white, white]]
 
 whiteBlackQT :: QT.QuadTree RGBA
-whiteBlackQT = QT (Leaf (black, 1, 1)) (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) 2 2
+whiteBlackQT =
+  QT
+    (Leaf (black, 1, 1))
+    (Leaf (white, 1, 1))
+    (Leaf (white, 1, 1))
+    (Leaf (white, 1, 1))
+    2
+    2
 
 advancedQT :: QT.QuadTree RGBA
 advancedQT =
@@ -237,7 +260,13 @@ testRotate =
       [ QT.rotateLeft whiteQT ~?= whiteQT,
         P.rotateRight whitePPM ~?= whitePPM,
         QT.rotateRight whiteBlackQT
-          ~?= QT (Leaf (white, 1, 1)) (Leaf (black, 1, 1)) (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) 2 2,
+          ~?= QT
+            (Leaf (white, 1, 1))
+            (Leaf (black, 1, 1))
+            (Leaf (white, 1, 1))
+            (Leaf (white, 1, 1))
+            2
+            2,
         P.rotateRight
           whiteBlackPPM
           ~?= [[white, black], [white, white]]
@@ -251,7 +280,13 @@ testReflect =
       [ QT.reflectHorizontal whiteQT ~?= whiteQT,
         P.reflectVertical whitePPM ~?= whitePPM,
         QT.reflectVertical whiteBlackQT
-          ~?= QT (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) (Leaf (black, 1, 1)) (Leaf (white, 1, 1)) 2 2,
+          ~?= QT
+            (Leaf (white, 1, 1))
+            (Leaf (white, 1, 1))
+            (Leaf (black, 1, 1))
+            (Leaf (white, 1, 1))
+            2
+            2,
         P.reflectHorizontal whiteBlackPPM ~?= [[white, black], [white, white]]
       ]
 

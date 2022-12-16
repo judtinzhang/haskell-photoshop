@@ -101,12 +101,10 @@ getSubArray start end array = take (end - start + 1) (drop start array)
 reverseList :: [a] -> [a]
 reverseList = foldl (flip (:)) []
 
--- ================= Image Processing ===========================
+-- ================= Image Processing Functions ===========================
 
 type PPM =
   [[RGBA]]
-
--- ================= User Functions ===========================
 
 rotateLeft :: PPM -> PPM
 rotateLeft = reverseList . transposeList

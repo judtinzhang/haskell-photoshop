@@ -51,4 +51,3 @@ main = do
 
 -- benchmarking
 -- stack exec project-cis5520-exe
--- clean up code
