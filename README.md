@@ -1,37 +1,52 @@
-# project-cis5520
+# haskell-photoshop
+Names: Jason Yan and Justin Zhang
+Pennkeys: jasyan and judtin
 
-This is an "Empty project" for Haskell. It is configured in the same way as
-the lecture demo and homework assignments for CIS 5520, but contains no
-code. Feel free to use this project for experimentation!
-
-If you want to change the name of this project, look for all occurrences of
-`project-cis5520` in the `project-cis5520.cabal` file and in the `hie.yaml` 
-file. (And change the name of the cabal file to match your new name!)
+We created Haskell Photoshop, which processes images and performs various
+manipulations on them. A key component of our photoshop program is our
+extensible design that allows multiple implementations of the same image
+processing functions using different image representations. Since they all
+implement the same functions, a user can pick and choose an implementation
+that is best suited for their task. Becuase of our multiple implementations,
+we put an emphasis on rigorous testing and profiling of them.
 
 ## Module organization
 
-Haskell packages typically divide their source code into three separate places:
-  - The bulk of your code should be developed as a reusable library in 
-    modules in the `src` directory. We've created [Lib.hs](src/Lib.hs) 
-    for you to get started. You can add additional modules here.
-  
-  - The entry point for your executable is in [Main.hs](app/Main.hs). 
-  
-  - All of your test cases should be in [the test directory](test/Spec.hs).
+I would reccomend start reading from the (short) app/Main.hs or app/Benchmarking.hs 
+in order to get a sense of how the image processing functions are used. Then, move 
+onto src/PPM.hs, our simpler implementation, before reading src/QuadTree.hs. 
 
-## Building, running, and testing
+app/Main.hs:
+Home of our main function, uses supplied by a image representation file in order
+to manipulate images at a high level.
 
-This project compiles with `stack build`. 
-You can run the main executable with `stack run`.
-You can run the tests with `stack test`. 
+app/Benchmarking.hs:
+Runs a benchmark suite on the image processing functions available, timing their
+runtimes. Run suite with `stack bench`.
 
-Finally, you can start a REPL with `stack ghci`.
+src/PPM.hs:
+An implementation of our image processing functions using the PPM (Portable
+Pixel Map) format, which is just a 2D array of pixels.
 
-## Importing additional libraries
+src/QuadTree.hs:
+An implementation of our image processing functions using the QuadTree format.
+The QuadTree fully supports rectangular images. In addition to general functions
+listed below, supports an extra lossyCompression function. 
 
-This project is designed to run with stackage: you can easily use any library
-in https://www.stackage.org/lts-19.19 by adding an entry to the
-`build-depends` list of the `common-stanza` in the cabal file. If you want to
-use a library that is not on stackage, you'll need to update the common-stanza
-*and* add information to `stack.yaml` about where to find that library.
+## Image Processing Functions
 
+Here are the functions supported by all image representations
+
+readInput
+toJpg
+toPng
+
+blur
+changeColor
+crop
+grayscale
+reflectHorizontal
+reflectVertical
+rotateLeft
+rotateRight
+saturate

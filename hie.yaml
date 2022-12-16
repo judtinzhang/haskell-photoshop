@@ -1,17 +1,17 @@
 cradle:
   stack:
     - path: ./test
-      component: "project-cis5520:test:project-cis5520-test"
+      component: "haskell-photoshop:test:haskell-photoshop-test"
     # - path: ./src
-    #   component: "project-cis5520:io"
+    #   component: "haskell-photoshop:io"
     - path: ./src
-      component: "project-cis5520:main"
+      component: "haskell-photoshop:main"
     - path: ./src
-      component: "project-cis5520:benchmarking"
+      component: "haskell-photoshop:benchmarking"
     - path: ./src
-      component: "project-cis5520:quadtree"
+      component: "haskell-photoshop:quadtree"
     - path: ./src
-      component: "project-cis5520:ppm"
+      component: "haskell-photoshop:ppm"
     - path: ./app
-      component: "project-cis5520:exe:project-cis5520-exe"
+      component: "haskell-photoshop:exe:haskell-photoshop-exe"
 

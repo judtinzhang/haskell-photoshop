@@ -1,4 +1,4 @@
-# Changelog for project-cis5520
+# Changelog for haskell-photoshop
 
 ## 22fa
 - Uses lts-19.19

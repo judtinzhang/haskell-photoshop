@@ -33,21 +33,17 @@ import QuadTree
 
 main :: IO ()
 main = do
-  image <- readInput "mountains.png"
-
-  -- let transformed = blur image 3
+  -- image <- readInput "mountains.png"
   -- let transformed = rotateLeft image
-  let transformed = lossyCompress 50 image
+  -- toPng transformed "output.png"
 
+  -- image <- readInput "apple.png"
+  -- let transformed = saturate 0.5 image
+  -- toPng transformed "output.png"
+
+  image <- readInput "car.png"
+  let transformed = crop 0 585 0 640 $ grayscale $ reflectVertical image
   toPng transformed "output.png"
 
--- -- let qt = changeColor yellow (100, 100, 255, 50) $ compress ppm
--- -- let qt = rotateRight $ grayscale $ reflectVertical $ compress ppm
--- -- let transformed = changeColor yellow (0, 0, 200, 255) ppm
--- -- let transformed = blur ppm 3
--- --  in let image = writeOutput transformed
--- --  in -- let transformed = crop 100 500 200 900 ppm
--- let qt = lossyCompress 60 ppm
-
 -- benchmarking
--- stack exec project-cis5520-exe
+-- stack exec haskell-photoshop-exe
