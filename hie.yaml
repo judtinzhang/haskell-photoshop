@@ -7,6 +7,8 @@ cradle:
     - path: ./src
       component: "project-cis5520:main"
     - path: ./src
+      component: "project-cis5520:benchmarking"
+    - path: ./src
       component: "project-cis5520:quadtree"
     - path: ./src
       component: "project-cis5520:ppm"

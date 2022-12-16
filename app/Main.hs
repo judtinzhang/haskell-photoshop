@@ -33,9 +33,9 @@ import PPM
 
 main :: IO ()
 main = do
-  image <- readInput "car.png"
+  image <- readInput "crab.png"
 
-  let transformed = rotateLeft image
+  let transformed = blur image 2
 
   toPng transformed "output.png"
 

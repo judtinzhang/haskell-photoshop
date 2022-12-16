@@ -34,6 +34,7 @@ common common-stanza
     , hip
     , JuicyPixels
     , vector
+    , criterion
     -- , split
   default-language:
     Haskell2010
@@ -123,3 +124,13 @@ test-suite project-cis5520-test
   build-depends:
       project-cis5520
 
+
+benchmark fences-benchmark
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      app, src
+  main-is:             Benchmarking.hs
+  build-depends:       base
+                     , criterion
+                     , JuicyPixels
+                     , vector
+  default-language:    Haskell2010
