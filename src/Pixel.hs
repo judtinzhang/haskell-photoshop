@@ -1,11 +1,11 @@
 module Pixel
   ( RGBA (..),
     HSL (..),
+    RGBARange (..),
     rgbToHsl,
     hslToRgb,
     pixelSaturate,
     mapRGBA,
-    RGBARange (..),
     yellow,
     pixelChangeColor,
     pixelGrayScale,
@@ -19,9 +19,44 @@ where
 import Codec.Picture
 import GHC.Float as FL
 
+-- ================= Type Definitions ===========================
+
+-- Two forms of Color Formats
 type RGBA = (Double, Double, Double, Double)
 
 type HSL = (Double, Double, Double, Double)
+
+-- RGBA Range specifying a range of RGBA values
+data RGBARange = RGBARange
+  { redRange :: (Double, Double),
+    greenRange :: (Double, Double),
+    blueRange :: (Double, Double),
+    alphaRange :: (Double, Double)
+  }
+  deriving (Show, Eq)
+
+-- An example of an RGBA range to denote all possible shades of yellow
+yellow :: RGBARange
+yellow =
+  RGBARange
+    { redRange = (100, 255),
+      greenRange = (100, 255),
+      blueRange = (0, 150),
+      alphaRange = (0, 255)
+    }
+
+-- ================= Helper Functions ===========================
+
+toDouble :: Pixel8 -> Double
+toDouble = fromIntegral . toInteger
+
+toPixel8 :: Double -> Pixel8
+toPixel8 = fromIntegral . round
+
+mapRGBA :: (Double -> a) -> RGBA -> (a, a, a, a)
+mapRGBA f (r, g, b, a) = (f r, f g, f b, f a)
+
+-- ================= Color Conversion Functions ===========================
 
 -- Converts a color from RGBA to HSL
 rgbToHsl :: RGBA -> HSL
@@ -35,6 +70,7 @@ rgbToHsl (r, g, b, a) = (h, s, l, a)
     delta = cmax - cmin
     l = (cmax + cmin) / 2
 
+    -- Case on cmax to determine hue value
     h
       | cmax == r' = if delta == 0 then 0 else 60 * (((g' - b') / delta) `mod'` 6)
       | cmax == g' = if delta == 0 then 0 else 60 * (((b' - r') / delta) + 2)
@@ -70,34 +106,33 @@ mod' x y =
    in let m_y = double2Int y :: Int
        in int2Double ((m_x `mod` m_y + m_y) `mod` m_y)
 
+-- Add on 0 transparency to an RGB to get an RGBA value
+rgbToRGBA :: [Pixel8] -> [Pixel8]
+rgbToRGBA (r : g : b : xs) = r : g : b : 255 : rgbToRGBA xs
+rgbToRGBA xs = xs
+
+ycbcrToRGBA :: [Pixel8] -> [Pixel8]
+ycbcrToRGBA (y : cb : cr : xs) = fromIntegral r : fromIntegral g : fromIntegral b : 255 : ycbcrToRGBA xs
+  where
+    y' :: Double
+    y' = fromIntegral $ toInteger y - 16
+    cb' :: Double
+    cb' = fromIntegral (toInteger cb) - 128
+    cr' :: Double
+    cr' = fromIntegral (toInteger cr) - 128
+    r = round $ y' + cr' * 1.402 :: Int
+    g = round $ y' + cb' * (-0.344136) + cr' * (-0.714136) :: Int
+    b = round $ y' + cb' * 1.772 :: Int
+ycbcrToRGBA xs = xs
+
+-- ================= Mappable functions, transforming an RGBA to RGBA ===========================
+
 pixelSaturate :: Double -> RGBA -> RGBA
 pixelSaturate deltaS p = p'
   where
     (h, s, l, a) = rgbToHsl p
     s' = max (min 1 deltaS) 0 -- keep saturation between 0 and 1
     p' = hslToRgb (h, s', l, a)
-
-mapRGBA :: (Double -> a) -> RGBA -> (a, a, a, a)
-mapRGBA f c = (f r, f g, f b, f a)
-  where
-    (r, g, b, a) = c
-
-data RGBARange = RGBARange
-  { redRange :: (Double, Double),
-    greenRange :: (Double, Double),
-    blueRange :: (Double, Double),
-    alphaRange :: (Double, Double)
-  }
-  deriving (Show, Eq)
-
-yellow :: RGBARange
-yellow =
-  RGBARange
-    { redRange = (100, 255),
-      greenRange = (100, 255),
-      blueRange = (0, 150),
-      alphaRange = (0, 255)
-    }
 
 pixelChangeColor :: RGBARange -> RGBA -> RGBA -> RGBA
 pixelChangeColor cr t c =
@@ -122,27 +157,3 @@ pixelGrayScale :: RGBA -> RGBA
 pixelGrayScale (r, g, b, a) = (gray, gray, gray, a)
   where
     gray = r / 3 + g / 3 + b / 3
-
-toDouble :: Pixel8 -> Double
-toDouble = fromIntegral . toInteger
-
-toPixel8 :: Double -> Pixel8
-toPixel8 = fromIntegral . round
-
-rgbToRGBA :: [Pixel8] -> [Pixel8]
-rgbToRGBA (r : g : b : xs) = r : g : b : 255 : rgbToRGBA xs
-rgbToRGBA xs = xs
-
-ycbcrToRGBA :: [Pixel8] -> [Pixel8]
-ycbcrToRGBA (y : cb : cr : xs) = fromIntegral r : fromIntegral g : fromIntegral b : 255 : ycbcrToRGBA xs
-  where
-    y' :: Double
-    y' = fromIntegral $ toInteger y - 16
-    cb' :: Double
-    cb' = fromIntegral (toInteger cb) - 128
-    cr' :: Double
-    cr' = fromIntegral (toInteger cr) - 128
-    r = round $ y' + cr' * 1.402 :: Int
-    g = round $ y' + cb' * (-0.344136) + cr' * (-0.714136) :: Int
-    b = round $ y' + cb' * 1.772 :: Int
-ycbcrToRGBA xs = xs

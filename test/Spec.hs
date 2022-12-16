@@ -1,6 +1,12 @@
 import PPM qualified as P
 import Pixel
-import QuadTree (QuadTree(QT, Leaf, LeafList), PixelList (..), recompress, compress, decompress)
+import QuadTree
+  ( PixelList (..),
+    QuadTree (Leaf, LeafList, QT),
+    compress,
+    decompress,
+    recompress,
+  )
 import QuadTree qualified as QT
 import Test.HUnit
   ( Counts,
@@ -11,10 +17,21 @@ import Test.HUnit
   )
 import Test.QuickCheck
 
-newtype RGBAWrapper = RGBAW {rgba :: RGBA}
-
+-- Helper method to round Doubles
 rounded :: Double -> Double
 rounded x = fromIntegral $ round x
+
+-- Helper function to generate a valid range of row and column indices for PPM
+validRanges :: P.PPM -> Int -> Int -> Int -> Int -> (Int, Int, Int, Int)
+validRanges ppm a b c d =
+  let r1 = min (length ppm - 1) $ max 0 a
+   in let r2 = min (length ppm - 1) $ max 0 b
+       in let c1 = min (length (head ppm) - 1) $ max 0 c
+           in let c2 = min (length (head ppm) - 1) $ max 0 d
+               in (min r1 r2, max r1 r2, min c1 c2, max c1 c2)
+
+-- Wrapper to generate valid RGBA values
+newtype RGBAWrapper = RGBAW {rgba :: RGBA}
 
 instance Arbitrary RGBAWrapper where
   arbitrary :: Gen RGBAWrapper
@@ -25,6 +42,7 @@ instance Arbitrary RGBAWrapper where
     a <- choose (4, 5)
     return $ RGBAW {rgba = (rounded r, rounded g, rounded b, rounded a)}
 
+-- Wrapper to generated valid PPM of RGBA values
 newtype PPMWrapper = PPMW {ppm :: P.PPM}
   deriving (Show)
 
@@ -37,6 +55,7 @@ instance Arbitrary PPMWrapper where
   shrink :: PPMWrapper -> [PPMWrapper]
   shrink _ = []
 
+-- Helper method to generate valid RGBA ranges
 genRGBARange :: Gen (Double, Double)
 genRGBARange = do
   x <- choose (0, 255)
@@ -61,6 +80,7 @@ instance Arbitrary RGBARange where
   shrink :: RGBARange -> [RGBARange]
   shrink _ = []
 
+-- Generates a QuadTree with given height and width
 genQuadTree :: Int -> Int -> Gen (QuadTree RGBA)
 genQuadTree 1 1 = genLeaf 1 1
 genQuadTree 1 w = do
@@ -75,6 +95,7 @@ genQuadTree h w =
       (1, genLeaf h w)
     ]
 
+-- Generates a QT with given height and width
 genQT :: Int -> Int -> Gen (QuadTree RGBA)
 genQT h w = do
   let w_len_1 = w `div` 2
@@ -87,6 +108,7 @@ genQT h w = do
   br <- genQuadTree h_len_2 w_len_2
   return $ QT tl tr bl br h w
 
+-- Generates a Leaf with given height and width
 genLeaf :: Int -> Int -> Gen (QuadTree RGBA)
 genLeaf h w = do
   wrapper <- arbitrary :: Gen RGBAWrapper
@@ -99,15 +121,23 @@ instance Arbitrary (QuadTree RGBA) where
     h <- suchThat arbitrary (> 0)
     genQuadTree h w
 
+  -- Shrunks on recursive subchildren of QuadTree
   shrink :: QT.QuadTree RGBA -> [QuadTree RGBA]
   shrink (QT tl tr bl br _ _) = [tl, tr, bl, br]
   shrink _ = []
 
--- Begin QuickCheck
+-- ================= QuickCheck ===========================
 
 -- Decompress and then compress should yield same QuadTree
 propDecompressCompressValid :: QT.QuadTree RGBA -> Bool
 propDecompressCompressValid qt = recompress qt == compress (decompress qt)
+
+-- Compress and then decompress should yield same PPM
+propCompressDecompressValid :: PPMWrapper -> Bool
+propCompressDecompressValid ppmw = ppm ppmw == decompress (compress $ ppm ppmw)
+
+-- The following property tests assert that operators should output the same result
+-- regardless of image representation (PPM and QuadTree)
 
 propRotateLeft :: QT.QuadTree RGBA -> Bool
 propRotateLeft qt = decompress (QT.rotateLeft qt) == P.rotateLeft (decompress qt)
@@ -120,24 +150,23 @@ propLossless ppmw =
        in length oldPPM * length (head oldPPM)
             == length newPPM * length (head newPPM)
 
--- Compress and then decompress should yield same PPM
-propCompressDecompressValid :: PPMWrapper -> Bool
-propCompressDecompressValid ppmw = ppm ppmw == decompress (compress $ ppm ppmw)
-
--- Property tests assert that operators should output the same result
--- regardless of image representation (PPM and QuadTree)
-
 propRotateRight :: QT.QuadTree RGBA -> Bool
 propRotateRight qt = decompress (QT.rotateRight qt) == P.rotateRight (decompress qt)
 
 propReflectHorizontal :: QT.QuadTree RGBA -> Bool
-propReflectHorizontal qt = decompress (QT.reflectHorizontal qt) == P.reflectHorizontal (decompress qt)
+propReflectHorizontal qt =
+  decompress (QT.reflectHorizontal qt)
+    == P.reflectHorizontal (decompress qt)
 
 propReflectVertical :: QT.QuadTree RGBA -> Bool
-propReflectVertical qt = decompress (QT.reflectVertical qt) == P.reflectVertical (decompress qt)
+propReflectVertical qt =
+  decompress (QT.reflectVertical qt)
+    == P.reflectVertical (decompress qt)
 
 propChangeColor :: RGBARange -> RGBA -> QT.QuadTree RGBA -> Bool
-propChangeColor range target qt = decompress (QT.changeColor range target qt) == P.changeColor range target (decompress qt)
+propChangeColor range target qt =
+  decompress (QT.changeColor range target qt)
+    == P.changeColor range target (decompress qt)
 
 propSaturate :: Double -> QT.QuadTree RGBA -> Bool
 propSaturate x qt = decompress (QT.saturate x qt) == P.saturate x (decompress qt)
@@ -146,15 +175,11 @@ propGrayScale :: QT.QuadTree RGBA -> Bool
 propGrayScale qt = decompress (QT.grayscale qt) == P.grayscale (decompress qt)
 
 propBlur :: QT.QuadTree RGBA -> Int -> Property
-propBlur qt x = x > 0 ==> decompress (QT.blur qt (min 5 x)) == P.blur (decompress qt) (min 5 x)
-
-validRanges :: P.PPM -> Int -> Int -> Int -> Int -> (Int, Int, Int, Int)
-validRanges ppm a b c d =
-  let r1 = min (length ppm - 1) $ max 0 a
-   in let r2 = min (length ppm - 1) $ max 0 b
-       in let c1 = min (length (head ppm) - 1) $ max 0 c
-           in let c2 = min (length (head ppm) - 1) $ max 0 d
-               in (min r1 r2, max r1 r2, min c1 c2, max c1 c2)
+propBlur qt x =
+  x
+    > 0
+    ==> decompress (QT.blur qt (min 5 x))
+    == P.blur (decompress qt) (min 5 x)
 
 -- Test propCrop on PPM because QuadTree does not maintain absolute coordinates of pixels
 propCrop :: PPMWrapper -> Int -> Int -> Int -> Int -> Bool
@@ -172,7 +197,7 @@ propGetColor ppmw a b c d =
        in Just (p !! r1 !! c1) == QT.getColor r1 c1 (compress p)
             && Just (p !! r2 !! c2) == QT.getColor r2 c2 (compress p)
 
--- Begin test cases
+-- ================= Test Cases ===========================
 
 white :: RGBA
 white = (255, 255, 255, 255)
@@ -190,7 +215,14 @@ whiteBlackPPM :: P.PPM
 whiteBlackPPM = [[black, white], [white, white]]
 
 whiteBlackQT :: QT.QuadTree RGBA
-whiteBlackQT = QT (Leaf (black, 1, 1)) (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) 2 2
+whiteBlackQT =
+  QT
+    (Leaf (black, 1, 1))
+    (Leaf (white, 1, 1))
+    (Leaf (white, 1, 1))
+    (Leaf (white, 1, 1))
+    2
+    2
 
 advancedQT :: QT.QuadTree RGBA
 advancedQT =
@@ -202,6 +234,7 @@ advancedQT =
     2
     3
 
+-- Tests that compress yields valid QuadTree
 testCompress :: Test
 testCompress =
   "Compress"
@@ -210,6 +243,7 @@ testCompress =
         compress whiteBlackPPM ~?= whiteBlackQT
       ]
 
+-- Tests that decompress yields valid PPM
 testDecompress :: Test
 testDecompress =
   "Decompress"
@@ -218,6 +252,7 @@ testDecompress =
         decompress whiteBlackQT ~?= whiteBlackPPM
       ]
 
+-- Test that rotating a QuadTree vs. PPM yields same output
 testRotate :: Test
 testRotate =
   "Rotate"
@@ -225,12 +260,19 @@ testRotate =
       [ QT.rotateLeft whiteQT ~?= whiteQT,
         P.rotateRight whitePPM ~?= whitePPM,
         QT.rotateRight whiteBlackQT
-          ~?= QT (Leaf (white, 1, 1)) (Leaf (black, 1, 1)) (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) 2 2,
+          ~?= QT
+            (Leaf (white, 1, 1))
+            (Leaf (black, 1, 1))
+            (Leaf (white, 1, 1))
+            (Leaf (white, 1, 1))
+            2
+            2,
         P.rotateRight
           whiteBlackPPM
           ~?= [[white, black], [white, white]]
       ]
 
+-- Test that reflecting a QuadTree vs. PPM yields same output
 testReflect :: Test
 testReflect =
   "Reflect"
@@ -238,10 +280,17 @@ testReflect =
       [ QT.reflectHorizontal whiteQT ~?= whiteQT,
         P.reflectVertical whitePPM ~?= whitePPM,
         QT.reflectVertical whiteBlackQT
-          ~?= QT (Leaf (white, 1, 1)) (Leaf (white, 1, 1)) (Leaf (black, 1, 1)) (Leaf (white, 1, 1)) 2 2,
+          ~?= QT
+            (Leaf (white, 1, 1))
+            (Leaf (white, 1, 1))
+            (Leaf (black, 1, 1))
+            (Leaf (white, 1, 1))
+            2
+            2,
         P.reflectHorizontal whiteBlackPPM ~?= [[white, black], [white, white]]
       ]
 
+-- Test that grayscaling a QuadTree vs. PPM yields same output
 testGrayScale :: Test
 testGrayScale =
   "Gray Scale"
@@ -250,21 +299,9 @@ testGrayScale =
         QT.grayscale whiteQT ~?= compress (P.grayscale (decompress whiteQT))
       ]
 
--- tPT = QT (Leaf ((2.0, 4.0, 4.0, 4.0), 1, 1)) (Leaf ((2.0, 1.0, 5.0, 3.0), 1, 1)) (Leaf ((3.0, 3.0, 1.0, 3.0), 1, 1)) (Leaf ((4.0, 3.0, 2.0, 1.0), 1, 1)) 2 2
-
--- QT.getColor (-1) (-1) tPT
--- testBad :: Test
--- testBad =
---   "testBad"
---     ~: TestList
---       [decompress (QT.blur tPT 1) ~?= blur (decompress tPT) 1]
-
 test_all :: IO Counts
 test_all = runTestTT $ TestList [testCompress, testDecompress, testRotate, testReflect, testGrayScale]
 
--- test_all = runTestTT $ TestList [testBad]
-
--- [[(2.5,3.0,3.0,2.5),(2.5,3.0,3.0,2.5)]]
 qc :: IO ()
 qc = do
   putStrLn "Decompress Compress"

@@ -1,26 +1,10 @@
 module Main where
 
-import PPM
-  ( blur,
-    changeColor,
-    crop,
-    grayscale,
-    readInput,
-    reflectHorizontal,
-    reflectVertical,
-    rotateLeft,
-    rotateRight,
-    saturate,
-    toJpg,
-    toPng,
-  )
-
--- import QuadTree
+-- import PPM
 --   ( blur,
 --     changeColor,
 --     crop,
 --     grayscale,
---     lossyCompress,
 --     readInput,
 --     reflectHorizontal,
 --     reflectVertical,
@@ -31,11 +15,29 @@ import PPM
 --     toPng,
 --   )
 
+import QuadTree
+  ( blur,
+    changeColor,
+    crop,
+    grayscale,
+    lossyCompress,
+    readInput,
+    reflectHorizontal,
+    reflectVertical,
+    rotateLeft,
+    rotateRight,
+    saturate,
+    toJpg,
+    toPng,
+  )
+
 main :: IO ()
 main = do
-  image <- readInput "crab.png"
+  image <- readInput "mountains.png"
 
-  let transformed = blur image 2
+  -- let transformed = blur image 3
+  -- let transformed = rotateLeft image
+  let transformed = lossyCompress 50 image
 
   toPng transformed "output.png"
 
@@ -49,5 +51,3 @@ main = do
 
 -- benchmarking
 -- stack exec project-cis5520-exe
--- Data.Vector
--- clean up code

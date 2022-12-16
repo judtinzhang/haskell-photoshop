@@ -12,11 +12,11 @@ module PPM
     readInput,
     toJpg,
     toPng,
+    neighborList,
   )
 where
 
 import Codec.Picture
-import qualified Data.Vector as V
 import qualified Data.Vector.Storable as VS
 import Pixel
 
@@ -25,6 +25,7 @@ import Pixel
 readInput :: String -> IO PPM
 readInput i = do
   dImage <- readImage i
+  -- Reads JPEG/JPG and PNG file types
   case dImage of
     Left err -> error "Error: Cannot process image"
     Right (ImageRGB8 image) ->
@@ -36,8 +37,9 @@ readInput i = do
     Right (ImageYCbCr8 image) ->
       let ppm = vecToPPM (map toDouble (ycbcrToRGBA $ VS.toList $ imageData image)) (imageWidth image)
        in return ppm
-    Right _ -> error "Error: Cannot process image"
+    Right _ -> error "Error: Unsupported Image Type"
 
+-- Generates PPM row given a width and stream of values
 createPPMRow :: [a] -> Int -> Int -> ([(a, a, a, a)], [a])
 createPPMRow stream@(r : g : b : a : xs) c w =
   if c < w
@@ -49,12 +51,14 @@ createPPMRow stream@(r : g : b : a : xs) c w =
     else ([], stream)
 createPPMRow _ _ _ = ([], [])
 
+-- Convert 1D array with width into 2D matrix
 vecToPPM :: [a] -> Int -> [[(a, a, a, a)]]
 vecToPPM v@(r : g : b : a : xs) w = ret : vecToPPM remaining w
   where
     (ret, remaining) = createPPMRow v 0 w
 vecToPPM _ _ = []
 
+-- Turn PPM to HIP native Image type
 convertToImage :: PPM -> Image PixelRGBA8
 convertToImage i =
   generateImage gen (length (head i)) (length i)
@@ -73,11 +77,9 @@ toPng p out_file =
   let image = convertToImage p
    in savePngImage out_file (ImageRGBA8 image)
 
--- ================= Image Processing ===========================
+-- ================= Generic Helper Functions ===========================
 
-type PPM =
-  [[RGBA]]
-
+-- Transposes list
 transposeList :: [[a]] -> [[a]]
 transposeList [] = []
 transposeList ([] : xss) = []
@@ -92,8 +94,17 @@ transposeList matrix =
       let (row, restRow) = transposeHelper xss
        in (x : row, xs : restRow)
 
+-- Gets subarray from i to j (inclusive)
+getSubArray :: Int -> Int -> [a] -> [a]
+getSubArray start end array = take (end - start + 1) (drop start array)
+
 reverseList :: [a] -> [a]
 reverseList = foldl (flip (:)) []
+
+-- ================= Image Processing Functions ===========================
+
+type PPM =
+  [[RGBA]]
 
 rotateLeft :: PPM -> PPM
 rotateLeft = reverseList . transposeList
@@ -116,38 +127,17 @@ saturate deltaS = map $ map $ pixelSaturate deltaS
 grayscale :: PPM -> PPM
 grayscale = map $ map pixelGrayScale
 
-validIndex :: PPM -> Int -> Int -> Bool
-validIndex ppm@(x : xs) i j = i >= 0 && i < length ppm && j >= 0 && j < length x
-validIndex _ _ _ = False
-
-updateAvg :: PPM -> Int -> Int -> (RGBA, Double) -> (RGBA, Double)
-updateAvg ppm i j t@((r, g, b, a), count) =
-  if validIndex ppm i j
-    then
-      let (r', g', b', a') = ppm !! i !! j
-       in ((r + r', g + g', b + b', a + a'), count + 1)
-    else t
-
-neighborList :: Int -> Int -> Int -> [(Int, Int)]
-neighborList i j radius = neighborListHelper i j radius (i - radius) (j - radius)
-
-neighborListHelper :: Int -> Int -> Int -> Int -> Int -> [(Int, Int)]
-neighborListHelper i j radius curri currj =
-  if curri == i + radius
-    then
-      if currj == j + radius
-        then []
-        else (curri, currj) : neighborListHelper i j radius (i - radius) (currj + 1)
-    else (curri, currj) : neighborListHelper i j radius (curri + 1) currj
-
-neighborAvg :: Int -> Int -> Int -> PPM -> RGBA
-neighborAvg i j radius ppm =
-  let nl = neighborList i j radius
-   in let (p, count) = foldr (\(i, j) acc -> updateAvg ppm i j acc) ((0, 0, 0, 0), 0) nl
-       in mapRGBA (/ count) p
+-- startRow, endRow, startCol, endCol
+crop :: Int -> Int -> Int -> Int -> PPM -> PPM
+crop r1 r2 c1 c2 ppm =
+  let rowCrop = getSubArray r1 r2 ppm
+   in let colCrop = map (getSubArray c1 c2) rowCrop
+       in colCrop
 
 blur :: PPM -> Int -> PPM
 blur ppm = blurHelper ppm 0
+
+-- ================= Helper functions for User Functions ===========================
 
 blurHelper :: PPM -> Int -> Int -> PPM
 blurHelper ppm v radius =
@@ -161,12 +151,36 @@ blurRow ppm i j radius =
     then neighborAvg i j radius ppm : blurRow ppm i (j + 1) radius
     else []
 
-getSubArray :: Int -> Int -> [a] -> [a]
-getSubArray start end array = take (end - start + 1) (drop start array)
+-- Checks whether a given x, y is a valid coordinate in the PPM
+validIndex :: PPM -> Int -> Int -> Bool
+validIndex ppm@(x : xs) i j = i >= 0 && i < length ppm && j >= 0 && j < length x
+validIndex _ _ _ = False
 
--- startRow, endRow, startCol, endCol
-crop :: Int -> Int -> Int -> Int -> PPM -> PPM
-crop r1 r2 c1 c2 ppm =
-  let rowCrop = getSubArray r1 r2 ppm
-   in let colCrop = map (getSubArray c1 c2) rowCrop
-       in colCrop
+-- Updates running sum and count of all neighbor RGBA values
+updateAvg :: PPM -> Int -> Int -> (RGBA, Double) -> (RGBA, Double)
+updateAvg ppm i j t@((r, g, b, a), count) =
+  if validIndex ppm i j
+    then
+      let (r', g', b', a') = ppm !! i !! j
+       in ((r + r', g + g', b + b', a + a'), count + 1)
+    else t
+
+-- Returns all possible neighbors to a cell given a radius
+neighborList :: Int -> Int -> Int -> [(Int, Int)]
+neighborList i j radius = neighborListHelper i j radius (i - radius) (j - radius)
+
+neighborListHelper :: Int -> Int -> Int -> Int -> Int -> [(Int, Int)]
+neighborListHelper i j radius curri currj =
+  if curri == i + radius
+    then
+      if currj == j + radius
+        then []
+        else (curri, currj) : neighborListHelper i j radius (i - radius) (currj + 1)
+    else (curri, currj) : neighborListHelper i j radius (curri + 1) currj
+
+-- Averages all neighbor RGBA values given a radius
+neighborAvg :: Int -> Int -> Int -> PPM -> RGBA
+neighborAvg i j radius ppm =
+  let nl = neighborList i j radius
+   in let (p, count) = foldr (\(i, j) acc -> updateAvg ppm i j acc) ((0, 0, 0, 0), 0) nl
+       in mapRGBA (/ count) p
