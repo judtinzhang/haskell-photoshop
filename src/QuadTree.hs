@@ -3,25 +3,31 @@ module QuadTree (
     PixelList (..),
     compress,
     decompress,
-    qtRotateLeft,
-    qtRotateRight,
-    qtReflectHorizontal,
-    qtReflectVertical,
-    qtChangeColor,
-    qtSaturate,
-    qtGrayscale,
-    qtBlur,
-    qtGetColor,
-    qtCrop,
-    testQT,
+    readInput,
+    toJpg,
+    toPng,
+    rotateLeft,
+    rotateRight,
+    reflectHorizontal,
+    reflectVertical,
+    changeColor,
+    saturate,
+    grayscale,
+    blur,
+    getColor,
+    crop,
+    recompress,
+    -- testQT,
     lossyCompress
 ) where
 
+import Codec.Picture
 import Data.Foldable qualified as Foldable
-import PPM qualified as P (PPM, ppmCrop)
+import PPM qualified as P (PPM, crop, readInput)
 import Pixel
 import Debug.Trace
 import Data.Maybe (isJust)
+-- import IO as I
 
 -- ================= DEBUGGING =========================
 
@@ -37,8 +43,51 @@ testQT = do
   let ppm = buildPPM $ fmap (+2) qt
   print ppm
 
--- =====================================================
+-- ================= IO ===========================
+readInput :: String -> IO (QuadTree RGBA)
+readInput s = do
+  input <- P.readInput s
+  return $ compress input
 
+  -- case input of
+  --   Nothing -> error "Error: Could not read image"
+  --   Just ppm -> return $ compress ppm
+
+size :: QuadTree e -> (Int, Int)
+size (QT _ _ _ _ h w) = (h, w)
+size (LeafList pl) = if isHorizontal pl then (1, length $ pixelData pl) else (length $ pixelData pl, 1)
+size (Leaf (_, h, w)) = (h, w)
+
+convertToImage :: QuadTree RGBA -> Image PixelRGBA8
+convertToImage i =
+  generateImage gen w h
+  where
+    (h, w) = size i
+    gen x y =
+      case getColor y x i of 
+        Nothing -> error "Error: Dimensions out of bounds"
+        Just (r, g, b, a) -> PixelRGBA8 (toPixel8 r) (toPixel8 g) (toPixel8 b) (toPixel8 a)
+  
+toJpg :: QuadTree RGBA -> String -> IO ()
+toJpg p out_file =
+  let image = convertToImage p
+   in saveJpgImage 100 out_file (ImageRGBA8 image)
+
+toPng :: QuadTree RGBA -> String -> IO ()
+toPng p out_file =
+  let image = convertToImage p
+   in savePngImage out_file (ImageRGBA8 image)
+
+
+
+-- readImage :: String -> IO (QuadTree RGBA)
+-- readImage in_file = do
+--   p <- readInput in_file
+--   case p of
+--     Nothing -> print "error"
+--     Just image -> return $ compress image
+
+-- ================= Image Processing ===========================
 data PixelList e = PL {
   isHorizontal :: Bool,
   pixelData :: [e]
@@ -182,119 +231,121 @@ recompress qt@(QT tl tr bl br h w) =
     then case color tl of
       Just c -> Leaf (c, h, w)
       Nothing -> error "impossible color"
-    else qt
+    else QT (recompress tl) (recompress tr) (recompress bl) (recompress br) h w
 recompress x = x
 
-qtGetColor :: Int -> Int -> QuadTree e -> Maybe e
-qtGetColor y x (Leaf (c, h, w)) =
+getColor :: Int -> Int -> QuadTree e -> Maybe e
+getColor y x (Leaf (c, h, w)) =
   if y < 0 || x < 0 || y >= h || x >= w
     then Nothing
     else Just c
-qtGetColor y x (LeafList pl) =
+getColor y x (LeafList pl) =
   let len = length $ pixelData pl in
-  if isHorizontal pl && (y /= 0 || y >= len || x < 0 || x >= len) || not (isHorizontal pl) && (x /= 0 || y < 0 || y >= len)
+  if isHorizontal pl && (y /= 0 || x < 0 || x >= len) || not (isHorizontal pl) && (x /= 0 || y < 0 || y >= len)
     then Nothing
     else Just $ if isHorizontal pl then pixelData pl !! x else pixelData pl !! y
-qtGetColor y x (QT tl tr bl br h w) =
+getColor y x (QT tl tr bl br h w) =
   if y < 0 || x < 0 || y >= h || x >= w
     then Nothing
     else
-      let x_mid = w `div` 2  in
-      let y_mid = h `div` 2 in
+      let y_mid = fst $ size tl in
+      let x_mid = snd $ size tl in
+      -- let x_mid = w `div` 2  in
+      -- let y_mid = h `div` 2 in
       if y < y_mid then
         if x < x_mid
-          then qtGetColor y x tl
-          else qtGetColor y (x - x_mid) tr
+          then getColor y x tl
+          else getColor y (x - x_mid) tr
       else
         if x < x_mid
-          then qtGetColor (y - y_mid) x bl
-          else qtGetColor (y - y_mid) (x - x_mid) br
+          then getColor (y - y_mid) x bl
+          else getColor (y - y_mid) (x - x_mid) br
 
-qtRotateLeft :: QuadTree e -> QuadTree e
-qtRotateLeft (Leaf (x, i, j)) = Leaf (x, j, i)
-qtRotateLeft (LeafList pl) =
+rotateLeft :: QuadTree e -> QuadTree e
+rotateLeft (Leaf (x, i, j)) = Leaf (x, j, i)
+rotateLeft (LeafList pl) =
     LeafList PL {
-      isHorizontal = not $ isHorizontal pl,
+      isHorizontal = not (isHorizontal pl),
       pixelData = if isHorizontal pl
         then reverse $ pixelData pl
         else pixelData pl
     }
-qtRotateLeft (QT tl tr bl br h w) = QT
-  (qtRotateLeft tr)
-  (qtRotateLeft br)
-  (qtRotateLeft tl)
-  (qtRotateLeft bl)
+rotateLeft (QT tl tr bl br h w) = QT
+  (rotateLeft tr)
+  (rotateLeft br)
+  (rotateLeft tl)
+  (rotateLeft bl)
   w
   h
 
-qtRotateRight :: QuadTree e -> QuadTree e
-qtRotateRight (Leaf (x, i, j)) = Leaf (x, j, i)
-qtRotateRight (LeafList pl) =
+rotateRight :: QuadTree e -> QuadTree e
+rotateRight (Leaf (x, i, j)) = Leaf (x, j, i)
+rotateRight (LeafList pl) =
     LeafList PL {
       isHorizontal = not $ isHorizontal pl,
       pixelData = if not $ isHorizontal pl
         then reverse $ pixelData pl
         else pixelData pl
     }
-qtRotateRight (QT tl tr bl br h w) = QT
-  (qtRotateRight bl)
-  (qtRotateRight tl)
-  (qtRotateRight br)
-  (qtRotateRight tr)
+rotateRight (QT tl tr bl br h w) = QT
+  (rotateRight bl)
+  (rotateRight tl)
+  (rotateRight br)
+  (rotateRight tr)
   w
   h
 
-qtReflectHorizontal :: QuadTree e -> QuadTree e
-qtReflectHorizontal (Leaf x) = Leaf x
-qtReflectHorizontal (LeafList pl) =
+reflectHorizontal :: QuadTree e -> QuadTree e
+reflectHorizontal (Leaf x) = Leaf x
+reflectHorizontal (LeafList pl) =
     LeafList PL {
       isHorizontal = isHorizontal pl,
       pixelData = if isHorizontal pl
         then reverse $ pixelData pl
         else pixelData pl
     }
-qtReflectHorizontal (QT tl tr bl br h w) = QT
-  (qtReflectHorizontal tr)
-  (qtReflectHorizontal tl)
-  (qtReflectHorizontal br)
-  (qtReflectHorizontal bl)
+reflectHorizontal (QT tl tr bl br h w) = QT
+  (reflectHorizontal tr)
+  (reflectHorizontal tl)
+  (reflectHorizontal br)
+  (reflectHorizontal bl)
   h
   w
 
-qtReflectVertical :: QuadTree e -> QuadTree e
-qtReflectVertical (Leaf x) = Leaf x
-qtReflectVertical (LeafList pl) =
+reflectVertical :: QuadTree e -> QuadTree e
+reflectVertical (Leaf x) = Leaf x
+reflectVertical (LeafList pl) =
     LeafList PL {
       isHorizontal = isHorizontal pl,
       pixelData = if not $ isHorizontal pl
         then reverse $ pixelData pl
         else pixelData pl
     }
-qtReflectVertical (QT tl tr bl br h w) = QT
-  (qtReflectVertical bl)
-  (qtReflectVertical br)
-  (qtReflectVertical tl)
-  (qtReflectVertical tr)
+reflectVertical (QT tl tr bl br h w) = QT
+  (reflectVertical bl)
+  (reflectVertical br)
+  (reflectVertical tl)
+  (reflectVertical tr)
   h
   w
 
-qtChangeColor :: RGBARange -> RGBA -> QuadTree RGBA -> QuadTree RGBA
-qtChangeColor range target qt = recompress ((fmap $ pixelChangeColor range target) qt)
+changeColor :: RGBARange -> RGBA -> QuadTree RGBA -> QuadTree RGBA
+changeColor range target qt = recompress ((fmap $ pixelChangeColor range target) qt)
 
-qtSaturate :: Double -> QuadTree RGBA -> QuadTree RGBA
-qtSaturate c qt = recompress ((fmap $ pixelSaturate c) qt)
+saturate :: Double -> QuadTree RGBA -> QuadTree RGBA
+saturate c qt = recompress ((fmap $ pixelSaturate c) qt)
 
-qtGrayscale :: QuadTree RGBA -> QuadTree RGBA
-qtGrayscale qt = recompress (fmap pixelGrayScale qt)
+grayscale :: QuadTree RGBA -> QuadTree RGBA
+grayscale qt = recompress (fmap pixelGrayScale qt)
 
 validIndex :: QuadTree RGBA -> Int -> Int -> Bool
-validIndex qt i j = isJust $ qtGetColor i j qt
+validIndex qt i j = isJust $ getColor i j qt
 
 updateAvg :: QuadTree RGBA -> Int -> Int -> (RGBA, Double) -> (RGBA, Double)
 updateAvg qt i j t@((r, g, b, a), count) =
   if validIndex qt i j
     then
-      case qtGetColor i j qt of
+      case getColor i j qt of
         Nothing -> error "Get Color should never return Nothing here"
         Just c ->
           let (r', g', b', a') = c
@@ -319,30 +370,30 @@ neighborAvg i j radius qt =
    in let (p, count) = foldr (\(i, j) acc -> updateAvg qt i j acc) ((0, 0, 0, 0), 0) nl
        in mapRGBA (/ count) p
 
-qtBlurHelper :: QuadTree RGBA -> Int -> Int -> Int -> Int -> P.PPM
-qtBlurHelper qt v radius h w =
+blurHelper :: QuadTree RGBA -> Int -> Int -> Int -> Int -> P.PPM
+blurHelper qt v radius h w =
   if v < h
-    then qtBlurRow qt v 0 radius w : qtBlurHelper qt (v + 1) radius h w
+    then blurRow qt v 0 radius w : blurHelper qt (v + 1) radius h w
     else []
 
-qtBlurRow :: QuadTree RGBA -> Int -> Int -> Int -> Int -> [RGBA]
-qtBlurRow qt i j radius w =
+blurRow :: QuadTree RGBA -> Int -> Int -> Int -> Int -> [RGBA]
+blurRow qt i j radius w =
   if j < w
-    then neighborAvg i j radius qt : qtBlurRow qt i (j + 1) radius w
+    then neighborAvg i j radius qt : blurRow qt i (j + 1) radius w
     else []
 
-qtBlur :: QuadTree RGBA -> Int -> QuadTree RGBA
-qtBlur qt@(Leaf _) _ = qt
-qtBlur qt@(LeafList pl) radius =
+blur :: QuadTree RGBA -> Int -> QuadTree RGBA
+blur qt@(Leaf _) _ = qt
+blur qt@(LeafList pl) radius =
   let h = if isHorizontal pl then 1 else length $ pixelData pl in
   let w = if isHorizontal pl then length $ pixelData pl else 1 in
-  compress (qtBlurHelper qt 0 radius h w)
-qtBlur qt@(QT tl tr bl br h w) radius = compress (qtBlurHelper qt 0 radius h w)
+  compress (blurHelper qt 0 radius h w)
+blur qt@(QT tl tr bl br h w) radius = compress (blurHelper qt 0 radius h w)
 
 
 -- ints: upper left corner (x, y) and size (w, l)
-qtCrop :: Int -> Int -> Int -> Int -> QuadTree RGBA -> QuadTree RGBA
-qtCrop r1 r2 c1 c2 qt = compress (P.ppmCrop r1 r2 c1 c2 (decompress qt))
+crop :: Int -> Int -> Int -> Int -> QuadTree RGBA -> QuadTree RGBA
+crop r1 r2 c1 c2 qt = compress (P.crop r1 r2 c1 c2 (decompress qt))
 
 lossyCompress :: Int -> P.PPM -> QuadTree RGBA
 lossyCompress s ppm@(w : ws) =
@@ -370,3 +421,4 @@ lossyCompress s ppm@(w : ws) =
               Nothing -> error "impossible color"
             else QT tl tr bl br (length ppm) (length w)
 lossyCompress _ [] = error "QT cannot accept empty image"
+

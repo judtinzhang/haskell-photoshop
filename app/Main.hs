@@ -1,27 +1,52 @@
 module Main where
 
-import Codec.Picture
-import IO (readInput, toJpg, toPng, writeOutput)
 import PPM
-import QuadTree
+  ( blur,
+    changeColor,
+    crop,
+    grayscale,
+    readInput,
+    reflectHorizontal,
+    reflectVertical,
+    rotateLeft,
+    rotateRight,
+    saturate,
+    toJpg,
+    toPng,
+  )
+
+-- import QuadTree
+--   ( blur,
+--     changeColor,
+--     crop,
+--     grayscale,
+--     lossyCompress,
+--     readInput,
+--     reflectHorizontal,
+--     reflectVertical,
+--     rotateLeft,
+--     rotateRight,
+--     saturate,
+--     toJpg,
+--     toPng,
+--   )
 
 main :: IO ()
 main = do
-  p <- readInput "mountains.png"
-  case p of
-    Nothing -> print "error"
-    Just ppm -> do
-      let qt = lossyCompress 60 ppm
-      -- let qt = qtChangeColor yellow (100, 100, 255, 50) $ compress ppm
-      -- let qt = qtRotateRight $ qtGrayscale $ qtReflectVertical $ compress ppm
-      let image = writeOutput (decompress qt)
-      -- let transformed = ppmChangeColor yellow (0, 0, 200, 255) ppm
-      -- let transformed = ppmBlur ppm 3
-      --  in let image = writeOutput transformed
-      --  in -- let transformed = ppmCrop 100 500 200 900 ppm
-      toPng (ImageRGBA8 image)
+  image <- readInput "car.png"
 
--- abstract out user interface
+  let transformed = rotateLeft image
+
+  toPng transformed "output.png"
+
+-- -- let qt = changeColor yellow (100, 100, 255, 50) $ compress ppm
+-- -- let qt = rotateRight $ grayscale $ reflectVertical $ compress ppm
+-- -- let transformed = changeColor yellow (0, 0, 200, 255) ppm
+-- -- let transformed = blur ppm 3
+-- --  in let image = writeOutput transformed
+-- --  in -- let transformed = crop 100 500 200 900 ppm
+-- let qt = lossyCompress 60 ppm
+
 -- benchmarking
 -- stack exec project-cis5520-exe
 -- Data.Vector

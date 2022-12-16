@@ -9,9 +9,14 @@ module Pixel
     yellow,
     pixelChangeColor,
     pixelGrayScale,
+    toPixel8,
+    toDouble,
+    ycbcrToRGBA,
+    rgbToRGBA,
   )
 where
 
+import Codec.Picture
 import GHC.Float as FL
 
 type RGBA = (Double, Double, Double, Double)
@@ -117,3 +122,27 @@ pixelGrayScale :: RGBA -> RGBA
 pixelGrayScale (r, g, b, a) = (gray, gray, gray, a)
   where
     gray = r / 3 + g / 3 + b / 3
+
+toDouble :: Pixel8 -> Double
+toDouble = fromIntegral . toInteger
+
+toPixel8 :: Double -> Pixel8
+toPixel8 = fromIntegral . round
+
+rgbToRGBA :: [Pixel8] -> [Pixel8]
+rgbToRGBA (r : g : b : xs) = r : g : b : 255 : rgbToRGBA xs
+rgbToRGBA xs = xs
+
+ycbcrToRGBA :: [Pixel8] -> [Pixel8]
+ycbcrToRGBA (y : cb : cr : xs) = fromIntegral r : fromIntegral g : fromIntegral b : 255 : ycbcrToRGBA xs
+  where
+    y' :: Double
+    y' = fromIntegral $ toInteger y - 16
+    cb' :: Double
+    cb' = fromIntegral (toInteger cb) - 128
+    cr' :: Double
+    cr' = fromIntegral (toInteger cr) - 128
+    r = round $ y' + cr' * 1.402 :: Int
+    g = round $ y' + cb' * (-0.344136) + cr' * (-0.714136) :: Int
+    b = round $ y' + cb' * 1.772 :: Int
+ycbcrToRGBA xs = xs

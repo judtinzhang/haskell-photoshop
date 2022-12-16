@@ -91,7 +91,6 @@ library
   import:
       common-stanza
   exposed-modules:
-      IO
       PPM
       QuadTree
       Pixel

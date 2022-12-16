@@ -2,12 +2,14 @@ cradle:
   stack:
     - path: ./test
       component: "project-cis5520:test:project-cis5520-test"
+    # - path: ./src
+    #   component: "project-cis5520:io"
     - path: ./src
-      component: "project-cis5520:io"
-    # - path: ./src
-    #   component: "project-cis5520:quadtree"
-    # - path: ./src
-    #   component: "project-cis5520:ppm"
+      component: "project-cis5520:main"
+    - path: ./src
+      component: "project-cis5520:quadtree"
+    - path: ./src
+      component: "project-cis5520:ppm"
     - path: ./app
       component: "project-cis5520:exe:project-cis5520-exe"
 
