@@ -33,10 +33,11 @@ import QuadTree
 
 main :: IO ()
 main = do
-  image <- readInput "crab.png"
+  image <- readInput "mountains.png"
 
-  let transformed = blur image 2
+  -- let transformed = blur image 3
   -- let transformed = rotateLeft image
+  let transformed = lossyCompress 50 image
 
   toPng transformed "output.png"
 

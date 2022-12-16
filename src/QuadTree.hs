@@ -146,33 +146,18 @@ recompress x = x
 -- Compresses the QuadTree in a lossy fashion, so as to not
 -- preserve all pixels and instead combine pixels that have similar
 -- RGBA values
-lossyCompress :: Int -> P.PPM -> QuadTree RGBA
-lossyCompress s ppm@(w : ws) =
-  let y_len = length ppm in
-  let x_len = length w in
-  let x_mid = x_len `div` 2  in
-  let y_mid = y_len `div` 2 in
-  if x_len == 1 && y_len == 1
-    then Leaf (head $ head ppm, 1, 1)
-    else
-      if x_len == 1 || y_len == 1
-        then
-          LeafList PL {
-            isHorizontal = y_len == 1,
-            pixelData = concat ppm
-          }
-        else
-          let tl = lossyCompress s $ getSubMatrix 0 x_mid 0 y_mid ppm in
-          let tr = lossyCompress s $ getSubMatrix x_mid x_len 0 y_mid ppm in
-          let bl = lossyCompress s $ getSubMatrix 0 x_mid y_mid y_len ppm in
-          let br = lossyCompress s $ getSubMatrix x_mid x_len y_mid y_len ppm in
-          if closeQTColor s tl tr && closeQTColor s tr bl && closeQTColor s bl br
-            then case lossyColor s tl of
-              Just c -> Leaf (c, y_len, x_len)
-              Nothing -> error "impossible color"
-            else QT tl tr bl br (length ppm) (length w)
-lossyCompress _ [] = error "QT cannot accept empty image"
-
+lossyCompress :: Int -> QuadTree RGBA -> QuadTree RGBA
+lossyCompress s (QT tl tr bl br h w) =
+  let tl_loss = lossyCompress s tl in
+  let tr_loss = lossyCompress s tr in
+  let bl_loss = lossyCompress s bl in
+  let br_loss = lossyCompress s br in
+  if closeQTColor s tl_loss tr_loss && closeQTColor s tr_loss bl_loss && closeQTColor s bl_loss br_loss
+    then case lossyColor s tl_loss of
+      Just c -> Leaf (c, h, w)
+      Nothing -> error "impossible color"
+    else QT tl_loss tr_loss bl_loss br_loss h w
+lossyCompress _ x = x
 
 -- ================= QuadTree Internal Functions ===========================
 
